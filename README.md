@@ -81,8 +81,12 @@ the Info tab if you want the camera button.
    https://github.com/anewbyss/snake-keeper-app/archive/refs/heads/main.zip (sign in first; the repo is private).
 3. In the Files app, tap the ZIP to unzip it, then open `snake-keeper-app-main/SnakeKeeper.swiftpm`.
    It opens in Playgrounds.
-4. Tap ▶ to run it. To install it as a normal app on the home screen, use
-   *App Settings → Install on This iPad* (or the ⋯ menu, depending on the version).
+4. Tap ▶ to run it.
+
+To get a real home-screen icon from the iPad you need an Apple Developer Program membership
+($99/year): in Playgrounds open *App Settings → App Store Connect → Upload to App Store Connect*,
+then install the build with the TestFlight app (builds last 90 days). Without a membership, a
+Shortcuts home-screen icon can open Swift Playgrounds, and you tap ▶ from there.
 
 `SnakeKeeper.swiftpm` is generated. After changing `App/` or `SnakeGenetics/`, run
 `scripts/make-playground.sh` to rebuild it.
