@@ -1,6 +1,6 @@
 // Offline support: serve the app from cache, refresh the cache in the background.
 // Bump VERSION when files are added or renamed.
-const VERSION = "snakekeeper-v1";
+const VERSION = "snakekeeper-v2";
 const FILES = [
   "./", "index.html", "styles.css", "manifest.webmanifest",
   "js/app.js", "js/db.js", "js/export.js", "js/genes.js", "js/genetics.js", "js/model.js", "js/sync.js", "js/ui.js", "js/xlsx.js",

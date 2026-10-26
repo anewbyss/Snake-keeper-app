@@ -12,6 +12,24 @@ export const SPECIES = [
     "locus": "bp.albino"
    },
    {
+    "id": "bp.axanthicjolliff",
+    "name": "Axanthic (Jolliff)",
+    "inheritance": "recessive",
+    "locus": "bp.axanthicjolliff"
+   },
+   {
+    "id": "bp.axanthicmj",
+    "name": "Axanthic (MJ)",
+    "inheritance": "recessive",
+    "locus": "bp.axanthicmj"
+   },
+   {
+    "id": "bp.axanthictsk",
+    "name": "Axanthic (TSK)",
+    "inheritance": "recessive",
+    "locus": "bp.axanthictsk"
+   },
+   {
     "id": "bp.axanthic",
     "name": "Axanthic (VPI)",
     "inheritance": "recessive",
@@ -86,6 +104,12 @@ export const SPECIES = [
     "locus": "bp.puzzle"
    },
    {
+    "id": "bp.rainbow",
+    "name": "Rainbow",
+    "inheritance": "recessive",
+    "locus": "bp.rainbow"
+   },
+   {
     "id": "bp.sunset",
     "name": "Sunset",
     "inheritance": "recessive",
@@ -110,14 +134,32 @@ export const SPECIES = [
     "locus": "bp.ultramel"
    },
    {
+    "id": "bp.acid",
+    "name": "Acid",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.acid"
+   },
+   {
+    "id": "bp.arroyo",
+    "name": "Arroyo",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.arroyo"
+   },
+   {
     "id": "bp.asphalt",
     "name": "Asphalt",
     "inheritance": "incompleteDominant",
     "locus": "bp.yb"
    },
    {
+    "id": "bp.bamboo",
+    "name": "Bamboo",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.bamboo"
+   },
+   {
     "id": "bp.banana",
-    "name": "Banana",
+    "name": "Banana (Coral Glow)",
     "inheritance": "incompleteDominant",
     "locus": "bp.banana",
     "superName": "Super Banana",
@@ -131,11 +173,23 @@ export const SPECIES = [
     "homozygousWarning": "may show kinking or duckbill"
    },
    {
+    "id": "bp.blade",
+    "name": "Blade",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.blade"
+   },
+   {
     "id": "bp.butter",
     "name": "Butter",
     "inheritance": "incompleteDominant",
     "locus": "bp.bel",
     "superName": "Blue Eyed Leucistic"
+   },
+   {
+    "id": "bp.chocolate",
+    "name": "Chocolate",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.chocolate"
    },
    {
     "id": "bp.cinnamon",
@@ -145,10 +199,40 @@ export const SPECIES = [
     "homozygousWarning": "may show kinking or duckbill"
    },
    {
+    "id": "bp.cryptic",
+    "name": "Cryptic",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.cryptic"
+   },
+   {
+    "id": "bp.cypress",
+    "name": "Cypress",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.cypress"
+   },
+   {
+    "id": "bp.disco",
+    "name": "Disco",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.disco"
+   },
+   {
     "id": "bp.enchi",
     "name": "Enchi",
     "inheritance": "incompleteDominant",
     "locus": "bp.enchi"
+   },
+   {
+    "id": "bp.enhancer",
+    "name": "Enhancer",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.enhancer"
+   },
+   {
+    "id": "bp.fader",
+    "name": "Fader",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.fader"
    },
    {
     "id": "bp.fire",
@@ -164,10 +248,28 @@ export const SPECIES = [
     "locus": "bp.ghi"
    },
    {
+    "id": "bp.granite",
+    "name": "Granite",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.granite"
+   },
+   {
     "id": "bp.gravel",
     "name": "Gravel",
     "inheritance": "incompleteDominant",
     "locus": "bp.yb"
+   },
+   {
+    "id": "bp.huffman",
+    "name": "Huffman",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.huffman"
+   },
+   {
+    "id": "bp.hurricane",
+    "name": "Hurricane",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.hurricane"
    },
    {
     "id": "bp.leopard",
@@ -183,6 +285,24 @@ export const SPECIES = [
     "superName": "Blue Eyed Leucistic"
    },
    {
+    "id": "bp.lori",
+    "name": "Lori",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.lori"
+   },
+   {
+    "id": "bp.mahogany",
+    "name": "Mahogany",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.mahogany"
+   },
+   {
+    "id": "bp.mocha",
+    "name": "Mocha",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.mocha"
+   },
+   {
     "id": "bp.mojave",
     "name": "Mojave",
     "inheritance": "incompleteDominant",
@@ -194,6 +314,12 @@ export const SPECIES = [
     "name": "Mystic",
     "inheritance": "incompleteDominant",
     "locus": "bp.bel"
+   },
+   {
+    "id": "bp.orangebelly",
+    "name": "Orange Belly",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.orangebelly"
    },
    {
     "id": "bp.orangedream",
@@ -215,6 +341,18 @@ export const SPECIES = [
     "locus": "bp.bel"
    },
    {
+    "id": "bp.redstripe",
+    "name": "Red Stripe",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.redstripe"
+   },
+   {
+    "id": "bp.rhino",
+    "name": "Rhino",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.rhino"
+   },
+   {
     "id": "bp.russo",
     "name": "Russo",
     "inheritance": "incompleteDominant",
@@ -229,16 +367,54 @@ export const SPECIES = [
     "homozygousWarning": "Super Sable is linked to kinking and eye issues"
    },
    {
+    "id": "bp.special",
+    "name": "Special",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.bel"
+   },
+   {
+    "id": "bp.specter",
+    "name": "Specter",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.specter"
+   },
+   {
     "id": "bp.spotnose",
     "name": "Spotnose",
     "inheritance": "incompleteDominant",
     "locus": "bp.spotnose"
    },
    {
+    "id": "bp.static",
+    "name": "Static",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.static"
+   },
+   {
+    "id": "bp.sugar",
+    "name": "Sugar",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.sugar"
+   },
+   {
+    "id": "bp.trick",
+    "name": "Trick",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.trick"
+   },
+   {
     "id": "bp.vanilla",
     "name": "Vanilla",
     "inheritance": "incompleteDominant",
     "locus": "bp.vanilla"
+   },
+   {
+    "id": "bp.woma",
+    "name": "Woma",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.woma",
+    "warning": "neurological wobble reported",
+    "homozygousWarning": "Super Woma is rarely if ever produced and is thought to be lethal"
    },
    {
     "id": "bp.yellowbelly",
@@ -279,13 +455,6 @@ export const SPECIES = [
     "inheritance": "dominant",
     "locus": "bp.spider",
     "warning": "neurological wobble in essentially all Spiders"
-   },
-   {
-    "id": "bp.woma",
-    "name": "Woma",
-    "inheritance": "dominant",
-    "locus": "bp.woma",
-    "warning": "neurological wobble reported"
    }
   ]
  },

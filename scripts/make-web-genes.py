@@ -14,7 +14,7 @@ species = []
 for m in re.finditer(r'static let \w+ = Species\(\s*name: "([^"]+)",\s*scientificName: "([^"]+)",\s*incubationDays: (\w+),\s*genes: \[(.*?)\n        \]', src, re.S):
     name, sci, inc, body = m.groups()
     genes = []
-    for call in re.finditer(r'\b(rec|inc|dom)\("(\w+)", "([^"]+)"(.*?)\)(?:,|\n)', body):
+    for call in re.finditer(r'\b(rec|inc|dom)\("(\w+)", "([^"]+)"(.*?)\),?(?:\n|$)', body, re.S):
         kind, prefix, gname, rest = call.groups()
         gid = arg(rest, "id") or re.sub(r'[^a-z0-9]', '', gname.lower())
         locus = arg(rest, "locus")

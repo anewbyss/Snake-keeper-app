@@ -72,7 +72,7 @@ both directions to bring both apps fully up to date. The format is described in 
 - **Allelic genes** on a shared locus, with compound names: Lesser × Mojave → Blue Eyed Leucistic,
   Yellow Belly × Gravel → Highway, Amel × Ultra → Ultramel, and so on
 - Any number of genes at once (e.g. a triple-het × triple-het cross gives all 8 groups)
-- Built-in libraries for Ball Python (40+ genes), Corn Snake, Western Hognose and Boa
+- Built-in libraries for Ball Python (70+ genes), Corn Snake, Western Hognose and Boa
 - Custom genes for any species (Settings tab), including allelic links and health notes
 
 ```swift
