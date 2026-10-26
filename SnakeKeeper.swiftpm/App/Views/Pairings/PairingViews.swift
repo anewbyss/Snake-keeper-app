@@ -19,8 +19,13 @@ struct PairingsListView: View {
                     } label: {
                         Label("Pairing Finder", systemImage: "sparkle.magnifyingglass")
                     }
+                    NavigationLink {
+                        BreedingRecordsView()
+                    } label: {
+                        Label("Breeding Records", systemImage: "oval.portrait")
+                    }
                 } footer: {
-                    Text("Rank every possible pairing in your collection by the odds of producing a target gene.")
+                    Text("Rank pairings by the odds of producing a target gene, or review past clutches and season stats.")
                 }
                 ForEach(seasons, id: \.self) { season in
                     Section(String(season)) {
@@ -99,6 +104,8 @@ struct PairingEditView: View {
     @State private var layDate: Date?
     @State private var eggCount: Int?
     @State private var fertileEggCount: Int?
+    @State private var hatchedCount: Int?
+    @State private var incubationTempF: Double?
     @State private var hatchDate: Date?
     @State private var notes: String
 
@@ -116,6 +123,8 @@ struct PairingEditView: View {
         _layDate = State(initialValue: pairing?.layDate)
         _eggCount = State(initialValue: pairing?.eggCount)
         _fertileEggCount = State(initialValue: pairing?.fertileEggCount)
+        _hatchedCount = State(initialValue: pairing?.hatchedCount)
+        _incubationTempF = State(initialValue: pairing?.incubationTempF)
         _hatchDate = State(initialValue: pairing?.hatchDate)
         _notes = State(initialValue: pairing?.notes ?? "")
     }
@@ -163,7 +172,17 @@ struct PairingEditView: View {
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
                 }
+                LabeledContent("Incubation °F") {
+                    TextField("e.g. 88.5", value: $incubationTempF, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                }
                 OptionalDatePicker("Hatched", date: $hatchDate)
+                LabeledContent("Hatched / born") {
+                    TextField("–", value: $hatchedCount, format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                }
             }
             Section("Notes") {
                 TextField("Notes", text: $notes, axis: .vertical)
@@ -199,6 +218,8 @@ struct PairingEditView: View {
         target.layDate = layDate
         target.eggCount = eggCount
         target.fertileEggCount = fertileEggCount
+        target.hatchedCount = hatchedCount
+        target.incubationTempF = incubationTempF
         target.hatchDate = hatchDate
         target.notes = notes
         context.saveNow()
@@ -281,6 +302,18 @@ struct PairingDetailView: View {
                     LabeledContent("Est. hatch", value: "~" + estimate.formatted(date: .abbreviated, time: .omitted))
                 }
                 row("Hatched", pairing.hatchDate)
+                let stats = ClutchStats(pairing)
+                if let hatched = stats.hatched {
+                    LabeledContent("Hatched / born", value: stats.hatchRate.map { "\(hatched) (\(ClutchStats.percent($0)))" } ?? "\(hatched)")
+                }
+                if let days = stats.incubationDays {
+                    LabeledContent("Incubation", value: "\(days) days" + (pairing.incubationTempF.map { String(format: " at %.1f°F", $0) } ?? ""))
+                } else if let temp = pairing.incubationTempF {
+                    LabeledContent("Incubation temp", value: String(format: "%.1f°F", temp))
+                }
+                if let weight = stats.femaleWeight {
+                    LabeledContent("♀ weight at pairing", value: Weight.format(weight))
+                }
             }
             Section(hatchlings.isEmpty ? "Hatchlings" : "Hatchlings (\(hatchlings.count))") {
                 ForEach(hatchlings) { baby in

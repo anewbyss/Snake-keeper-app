@@ -182,6 +182,8 @@ struct PairingDTO: SyncDTO {
     var fertileEggCount: Int?
     var hatchDate: Date?
     var notes: String?
+    var hatchedCount: Int?
+    var incubationTempF: Double?
 }
 
 struct CustomGeneDTO: SyncDTO {
@@ -308,7 +310,8 @@ enum SyncService {
                        status: p.statusRaw, introducedDate: p.introducedDate, lockCount: p.lockCount,
                        lastLockDate: p.lastLockDate, ovulationDate: p.ovulationDate, preLayShedDate: p.preLayShedDate,
                        layDate: p.layDate, eggCount: p.eggCount, fertileEggCount: p.fertileEggCount,
-                       hatchDate: p.hatchDate, notes: p.notes)
+                       hatchDate: p.hatchDate, notes: p.notes, hatchedCount: p.hatchedCount,
+                       incubationTempF: p.incubationTempF)
         }
         file.deleted = try context.fetch(FetchDescriptor<DeletedRecord>()).map {
             TombstoneDTO(id: $0.recordID, type: $0.type, deletedAt: $0.deletedAt)
@@ -473,6 +476,8 @@ enum SyncService {
             pairing.fertileEggCount = dto.fertileEggCount
             pairing.hatchDate = dto.hatchDate
             pairing.notes = dto.notes ?? ""
+            pairing.hatchedCount = dto.hatchedCount
+            pairing.incubationTempF = dto.incubationTempF
             if let createdAt = dto.createdAt { pairing.createdAt = createdAt }
         }
 

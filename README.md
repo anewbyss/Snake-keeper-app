@@ -52,7 +52,12 @@ Both apps have the same features:
 - **Batch edit**: tap **Select** in the Collection, pick several snakes, then add, change or remove
   a gene (or set their status) on all of them at once. Snakes the change would make impossible are
   skipped and named.
-- **Care log**: sheds, weights (with a trend chart), enclosure cleanings, medications and notes.
+- **Care log**: sheds, weights, enclosure cleanings, medications and notes.
+- **Growth tracker & guide**: weight plotted against age over the species' typical range, growth per
+  week, whether a snake is below / on track / above typical, suggested prey weight and feeding
+  interval for its size, and progress toward breeding weight with a time estimate. A Growth Overview
+  (Feeding tab) lists every snake. Guides cover Ball Python, Boa, California Kingsnake, Corn Snake and
+  Western Hognose (data in `scripts/make-growth.py`); other species get general advice.
 - **Feeding**: log meals (prey type, size, F/T / pre-killed / live, count, weight) or refusals. Shows
   the last meal, next due date, refusal streaks and acceptance rate. The Feeding tab lists every
   snake by urgency (overdue, due, fed) and you can swipe to log a meal. New logs start with the
@@ -67,6 +72,9 @@ Both apps have the same features:
 - **Pairing tracker**: planned → introduced → locks → ovulation → pre-lay shed → laid → hatched,
   with egg counts and estimated lay and hatch dates. **Add Hatchling** creates a baby with its
   parents, species and clutch filled in; parents list their offspring.
+- **Breeding records**: hatched count, incubation temperature, actual incubation days, hatch rate and
+  the female's weight at pairing for every clutch (past seasons too), season totals and each
+  female's history.
 - **Genetics calculator**: pick species, load parents from your collection or enter genes by hand,
   and see every outcome with its percentage, expected count per clutch, het / possible-het odds and
   health notes (e.g. Spider wobble).

@@ -31,6 +31,7 @@ struct SnakeDetailView: View {
             detailsSection
             feedingSection
             CareLogSection(snake: snake)
+            GrowthSection(snake: snake)
             concernsSection
             Section("Photos") { PhotoSection(snake: snake) }
             pairingsSection

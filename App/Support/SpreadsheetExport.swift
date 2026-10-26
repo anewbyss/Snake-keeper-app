@@ -1,4 +1,5 @@
 import Foundation
+import SnakeGenetics
 
 /// Turns the collection into spreadsheet tabs.
 struct SpreadsheetExport {
@@ -48,7 +49,7 @@ struct SpreadsheetExport {
                       "Hatch date", "Hatch date estimated", "Age",
                       "Origin", "Origin details", "Acquired", "Weight (g)", "Feed every (days)",
                       "Last meal", "Last meal prey", "Days since meal", "Feeding status",
-                      "Last shed", "Open concerns", "Photos", "Notes"],
+                      "Last shed", "Growth (g/week)", "Vs typical for age", "Open concerns", "Photos", "Notes"],
             rows: sortedSnakes.map { snake in
                 [
                     .text(snake.name),
@@ -73,6 +74,8 @@ struct SpreadsheetExport {
                     number(snake.daysSinceLastMeal.map { Double($0) }),
                     .text(snake.feedingStatus.label),
                     date(snake.lastShed?.date),
+                    number(snake.growthReport.rate.map { ($0 * 10).rounded() / 10 }),
+                    text(snake.growthReport.comparison?.label),
                     .text(snake.openConcerns.map(\.title).joined(separator: "; ")),
                     .number(Double(snake.photos.count)),
                     .text(snake.notes),
@@ -145,7 +148,8 @@ struct SpreadsheetExport {
         let rows = pairings
             .sorted { ($0.season, $0.createdAt) > ($1.season, $1.createdAt) }
             .map { pairing -> [Cell] in
-                [
+                let clutch = ClutchStats(pairing)
+                return [
                     .number(Double(pairing.season)),
                     text(pairing.female?.name),
                     text(pairing.female.map { catalog.describe($0.traits) }),
@@ -163,6 +167,11 @@ struct SpreadsheetExport {
                     number(pairing.fertileEggCount.map { Double($0) }),
                     date(pairing.estimatedHatchDate),
                     date(pairing.hatchDate),
+                    number(clutch.hatched.map { Double($0) }),
+                    text(clutch.hatchRate.map { ClutchStats.percent($0) }),
+                    number(pairing.incubationTempF),
+                    number(clutch.incubationDays.map { Double($0) }),
+                    number(clutch.femaleWeight),
                     .text(pairing.notes),
                 ]
             }
@@ -170,7 +179,8 @@ struct SpreadsheetExport {
             name: "Pairings",
             columns: ["Season", "Female", "Female morph", "Male", "Male morph", "Species", "Status",
                       "Introduced", "Locks", "Last lock", "Ovulation", "Pre-lay shed", "Laid / born",
-                      "Eggs", "Good eggs", "Est. hatch", "Hatched", "Notes"],
+                      "Eggs", "Good eggs", "Est. hatch", "Hatched", "Hatched / born", "Hatch rate",
+                      "Incubation temp (°F)", "Incubation days", "Female weight at pairing (g)", "Notes"],
             rows: rows
         )
     }

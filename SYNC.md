@@ -24,7 +24,7 @@ Change both sides together, and bump `version` for incompatible changes.
   "photos": [{ "id", "updatedAt", "snakeID", "dateTaken", "caption", "isCover", "image", "thumbnail" }],
   "pairings": [{ "id", "updatedAt", "createdAt", "femaleID", "maleID", "season", "status", "introducedDate",
                  "lockCount", "lastLockDate", "ovulationDate", "preLayShedDate", "layDate", "eggCount",
-                 "fertileEggCount", "hatchDate", "notes" }],
+                 "fertileEggCount", "hatchDate", "notes", "hatchedCount", "incubationTempF" }],
   "deleted": [{ "id", "type": "snakes" | "feedings" | …, "deletedAt" }],
   "profile": { "updatedAt", "name", "business", "location", "email", "phone", "website", "social", "photo",
                "defaultSpecies", "defaultFeedingInterval", "notes" }

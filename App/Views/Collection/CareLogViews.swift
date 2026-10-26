@@ -14,9 +14,6 @@ struct CareLogSection: View {
             if let shed = snake.lastShed {
                 LabeledContent("Last shed", value: shed.date.daysAgoString)
             }
-            if snake.weightLogs.count > 1 {
-                WeightChart(entries: snake.weightLogs)
-            }
             ForEach(snake.sortedLogs.prefix(3)) { entry in
                 Button { editing = entry } label: { LogEntryRow(entry: entry) }
                     .buttonStyle(.plain)

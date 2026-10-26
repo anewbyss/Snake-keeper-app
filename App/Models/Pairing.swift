@@ -44,6 +44,8 @@ final class Pairing {
     var layDate: Date?
     var eggCount: Int?
     var fertileEggCount: Int?
+    var hatchedCount: Int?
+    var incubationTempF: Double?
     var hatchDate: Date?
     var notes: String = ""
     var createdAt: Date = Date()

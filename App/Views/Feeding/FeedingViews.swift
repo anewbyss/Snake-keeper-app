@@ -181,7 +181,20 @@ struct FeedingScheduleView: View {
 
     var body: some View {
         NavigationStack {
-            List(sorted) { snake in
+            List {
+                Section {
+                    NavigationLink {
+                        GrowthOverviewView()
+                    } label: {
+                        LabeledContent {
+                            Text("weight vs age")
+                        } label: {
+                            Label("Growth Overview", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                    }
+                }
+                Section("Feeding Schedule") {
+                ForEach(sorted) { snake in
                 HStack {
                     SnakeThumbnail(photo: snake.coverPhoto, size: 44)
                     VStack(alignment: .leading, spacing: 2) {
@@ -211,6 +224,8 @@ struct FeedingScheduleView: View {
                 }
                 .contextMenu {
                     Button { feeding = snake } label: { Label("Log Feeding", systemImage: "fork.knife") }
+                }
+                }
                 }
             }
             .overlay {

@@ -148,3 +148,43 @@ final class BatchGeneChangeTests: XCTestCase {
         XCTAssertThrowsError(try calculator.validate(result))
     }
 }
+
+final class GrowthTests: XCTestCase {
+    let bp = GrowthGuide.guide(for: "Ball Python")!
+    private func day(_ d: Int) -> Date { Date(timeIntervalSince1970: Double(d) * 86400) }
+
+    func testStages() {
+        XCTAssertEqual(bp.stage(for: 90)?.label, "Hatchling")
+        XCTAssertEqual(bp.stage(for: 200)?.label, "Juvenile")
+        XCTAssertEqual(bp.stage(for: 2000)?.label, "Adult")
+    }
+
+    func testReferenceInterpolates() throws {
+        let range = try XCTUnwrap(bp.reference(atMonths: 9))
+        XCTAssertEqual(range.lowerBound, 300, accuracy: 1e-6)
+        XCTAssertEqual(range.upperBound, 650, accuracy: 1e-6)
+        XCTAssertNil(bp.reference(atMonths: 60))
+        XCTAssertEqual(Growth.compare(250, to: range), .below)
+        XCTAssertEqual(Growth.compare(500, to: range), .within)
+    }
+
+    func testRate() {
+        let w = [Weighing(date: day(0), grams: 100), Weighing(date: day(14), grams: 120), Weighing(date: day(28), grams: 140)]
+        XCTAssertEqual(Growth.rate(w) ?? 0, 10, accuracy: 1e-6)
+        XCTAssertNil(Growth.rate([Weighing(date: day(0), grams: 100), Weighing(date: day(4), grams: 110)]))
+    }
+
+    func testPreyAndWeeks() {
+        let prey = Growth.preyRange(for: 1000, guide: bp)
+        XCTAssertEqual(prey?.lowerBound ?? 0, 100, accuracy: 1e-6)
+        XCTAssertEqual(Growth.weeksToTarget(current: 1000, target: 1500, ratePerWeek: 25), 20)
+        XCTAssertEqual(Growth.weeksToTarget(current: 1600, target: 1500, ratePerWeek: 25), 0)
+        XCTAssertNil(Growth.weeksToTarget(current: 1000, target: 1500, ratePerWeek: 0))
+    }
+
+    func testEveryGuideMatchesASpecies() {
+        for guide in GrowthGuide.all {
+            XCTAssertNotNil(GeneLibrary.speciesInfo(named: guide.species), guide.species)
+        }
+    }
+}

@@ -9,6 +9,8 @@ import { buildSyncFile, parseSyncFile, planMerge, describeSummary } from "./sync
 import { xlsxBlob, csv } from "./xlsx.js";
 import { workbookSheets } from "./export.js";
 import { applyBatch } from "./batch.js";
+import { growthReport, referenceAt, GENERAL_TIPS } from "./growth.js";
+import { clutchStats, seasonSummaries, femaleHistory } from "./breeding.js";
 
 const app = document.getElementById("app");
 
@@ -62,6 +64,9 @@ const routes = [
   [/^#\/snake\/([^/]+)\/feedings$/, (id) => feedingHistoryView(id), "collection"],
   [/^#\/snake\/([^/]+)\/log$/, (id) => logHistoryView(id), "collection"],
   [/^#\/profile$/, () => profileView(), "settings"],
+  [/^#\/snake\/([^/]+)\/growth$/, (id) => growthView(id), "collection"],
+  [/^#\/growth$/, () => growthOverviewView(), "feeding"],
+  [/^#\/breeding$/, () => breedingView(), "pairings"],
   [/^#\/feeding$/, () => feedingView(), "feeding"],
   [/^#\/pairings$/, () => pairingsView(), "pairings"],
   [/^#\/pairing\/([^/]+)$/, (id) => pairingView(id), "pairings"],
@@ -310,6 +315,185 @@ function drawList() {
   }
 }
 
+// MARK: - Growth
+
+const weightPoints = (snake) => M.weightsFor(snake).map((l) => ({ date: l.date, grams: l.grams }));
+const snakeReport = (snake) => growthReport(snake, weightPoints(snake));
+const COMPARISON = {
+  below: { label: "Below typical", color: "var(--orange)" },
+  within: { label: "On track", color: "var(--green)" },
+  above: { label: "Above typical", color: "var(--blue)" },
+};
+
+function comparisonBadge(report) {
+  const c = COMPARISON[report.comparison];
+  return c ? h`<span class="badge" style="color:${c.color};background:color-mix(in srgb, ${c.color} 15%, transparent)">${c.label}</span>` : "";
+}
+
+const formatRate = (rate) => (rate == null ? null : `${rate >= 0 ? "+" : "−"}${formatWeight(Math.abs(rate))}/week`);
+
+/** Weight against age, over the species' typical range. Falls back to weight over time. */
+function growthChart(snake, report) {
+  if (!snake.hatchDate || !report.points.length) return weightChart(M.weightsFor(snake));
+  const w = 320, ht = 150, padL = 40, padB = 18, padT = 8, padR = 8;
+  const curveEnd = report.guide ? report.guide.curve[report.guide.curve.length - 1].months : 0;
+  const lastAge = Math.max(...report.points.map((p) => p.months), report.ageMonths ?? 0);
+  const maxM = Math.max(6, Math.ceil(lastAge * 1.15));
+  const band = [];
+  if (report.guide) {
+    for (let i = 0; i <= 48; i++) {
+      const m = (Math.min(maxM, curveEnd) * i) / 48;
+      const ref = referenceAt(report.guide, m);
+      if (ref) band.push({ m, ...ref });
+    }
+  }
+  const maxG = Math.max(...report.points.map((p) => p.grams), ...band.map((b) => b.high), 10) * 1.1;
+  const x = (m) => padL + (m / maxM) * (w - padL - padR);
+  const y = (g) => padT + (1 - g / maxG) * (ht - padT - padB);
+  const area = band.length
+    ? `M${band.map((b) => `${x(b.m).toFixed(1)},${y(b.high).toFixed(1)}`).join(" L")} L${[...band].reverse().map((b) => `${x(b.m).toFixed(1)},${y(b.low).toFixed(1)}`).join(" L")} Z`
+    : "";
+  const line = report.points.map((p, i) => `${i ? "L" : "M"}${x(p.months).toFixed(1)},${y(p.grams).toFixed(1)}`).join(" ");
+  const tick = (g) => (g >= 1000 ? `${(g / 1000).toFixed(1)}kg` : `${Math.round(g)}g`);
+  return h`<div class="row" style="display:block">
+    <div class="tiny">Weight by age${band.length ? " · shaded: typical range" : ""}</div>
+    <svg viewBox="0 0 ${w} ${ht}" style="width:100%;height:auto" role="img" aria-label="Weight by age chart">
+      ${area ? h`<path d="${area}" fill="var(--accent)" opacity="0.14"/>` : ""}
+      <line x1="${padL}" y1="${ht - padB}" x2="${w - padR}" y2="${ht - padB}" stroke="var(--line)"/>
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${ht - padB}" stroke="var(--line)"/>
+      <text x="${padL - 4}" y="${padT + 8}" text-anchor="end" font-size="7" fill="var(--muted)">${tick(maxG)}</text>
+      <text x="${padL - 4}" y="${ht - padB}" text-anchor="end" font-size="7" fill="var(--muted)">0</text>
+      <text x="${padL}" y="${ht - 4}" font-size="7" fill="var(--muted)">0 mo</text>
+      <text x="${w - padR}" y="${ht - 4}" text-anchor="end" font-size="7" fill="var(--muted)">${maxM} mo</text>
+      <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${report.points.map((p) => h`<circle cx="${x(p.months).toFixed(1)}" cy="${y(p.grams).toFixed(1)}" r="3" fill="var(--accent)"/>`)}
+    </svg>
+  </div>`;
+}
+
+/** Growth rows shared by the snake page and the full guide. */
+function growthRows(snake, report) {
+  const stage = report.stage;
+  const interval = stage ? (stage.minDays === stage.maxDays ? `every ${stage.minDays} days` : `every ${stage.minDays}–${stage.maxDays} days`) : null;
+  const intervalHint = stage && (snake.feedingIntervalDays < stage.minDays || snake.feedingIntervalDays > stage.maxDays)
+    ? ` · you feed every ${snake.feedingIntervalDays}` : "";
+  const target = report.target;
+  const progress = target && report.grams ? Math.min(1, report.grams / target.grams) : null;
+  return h`
+    ${report.grams ? h`<div class="row"><span class="grow">Current weight</span><span class="value">${formatWeight(report.grams)}${report.ageMonths != null ? ` at ${M.ageDescription(snake)}` : ""}</span></div>` : ""}
+    ${report.rate != null ? h`<div class="row"><span class="grow">Growth</span><span class="value">${formatRate(report.rate)}</span></div>`
+      : h`<div class="row sub">Log two weights at least two weeks apart to see the growth rate.</div>`}
+    ${report.reference ? h`<div class="row"><span class="grow">Typical at this age</span><span class="value">${formatWeight(report.reference.low)}–${formatWeight(report.reference.high)} ${comparisonBadge(report)}</span></div>` : ""}
+    ${stage ? h`<div class="row"><span class="grow">Stage · feed</span><span class="value">${stage.label} · ${interval}${intervalHint}</span></div>` : ""}
+    ${report.prey ? h`<div class="row"><span class="grow">Suggested prey</span><span class="value">${formatWeight(report.prey.low)}–${formatWeight(report.prey.high)} per meal</span></div>` : ""}
+    ${target ? h`<div class="row" style="display:block">
+        <div style="display:flex"><span class="grow">Breeding weight</span><span class="value">${report.grams ? formatWeight(report.grams) : "?"} / ${formatWeight(target.grams)}${
+          report.weeksToTarget === 0 ? " · reached" : report.weeksToTarget != null ? ` · ~${report.weeksToTarget} weeks at this rate` : ""}</span></div>
+        ${progress != null ? h`<div class="bar"><div style="width:${(progress * 100).toFixed(1)}%"></div></div>` : ""}
+        <div class="tiny" style="margin-top:4px">Usual minimum: ${formatWeight(target.grams)} and about ${target.months} months old.</div>
+      </div>` : ""}`;
+}
+
+function growthSection(snake) {
+  const report = snakeReport(snake);
+  return h`<h2>Growth</h2>
+    <div class="card">
+      ${growthChart(snake, report)}
+      ${growthRows(snake, report)}
+      <a class="row chevron" href="#/snake/${snake.id}/growth"><span class="grow">📈 Growth Guide</span></a>
+    </div>`;
+}
+
+function growthView(id) {
+  const snake = M.snakeByID(id);
+  if (!snake) return notFound("Snake");
+  const report = snakeReport(snake);
+  const g = report.guide;
+  return h`${topbar("Growth Guide", { back: { href: `#/snake/${id}`, label: snake.name } })}
+    <div class="card">
+      ${growthChart(snake, report)}
+      ${growthRows(snake, report)}
+      <button class="link-btn" data-action="log-care" data-id="${snake.id}" data-kind="weight">⚖︎ Log Weight</button>
+    </div>
+    ${!snake.hatchDate ? h`<p class="footnote">Add a hatch date (even an estimate) to compare weight with age.</p>` : ""}
+    ${g ? h`
+      <h2>${g.species} guide</h2>
+      <div class="card">
+        <div class="row"><span class="grow">Hatchling weight</span><span class="value">${formatWeight(g.hatchling[0])}–${formatWeight(g.hatchling[1])}</span></div>
+        <div class="row"><span class="grow">Hot spot</span><span class="value">${g.hotSpot}</span></div>
+        <div class="row"><span class="grow">Prey size</span><span class="value">${g.preyPercent[0]}–${g.preyPercent[1]}% of body weight</span></div>
+        <div class="row"><span class="grow">Breeding ♀</span><span class="value">${formatWeight(g.breedingFemale.grams)}+ · ~${g.breedingFemale.months} months</span></div>
+        <div class="row"><span class="grow">Breeding ♂</span><span class="value">${formatWeight(g.breedingMale.grams)}+ · ~${g.breedingMale.months} months</span></div>
+      </div>
+      <h2>Feeding by size</h2>
+      <div class="card">${g.stages.map((s, i) => {
+        const from = i ? g.stages[i - 1].upTo : 0;
+        const range = s.upTo == null ? `${formatWeight(from)}+` : `${formatWeight(from)}–${formatWeight(s.upTo)}`;
+        const current = report.stage?.label === s.label;
+        return h`<div class="row"${current ? raw(' style="background:var(--accent-soft)"') : ""}><span class="grow">${s.label}${current ? " (now)" : ""}<div class="tiny">${range}</div></span>
+          <span class="value">every ${s.minDays === s.maxDays ? s.minDays : `${s.minDays}–${s.maxDays}`} days</span></div>`;
+      })}</div>
+      ${g.tips.length ? h`<h2>${g.species} tips</h2><div class="card">${g.tips.map((t) => h`<div class="row">${t}</div>`)}</div>` : ""}`
+      : h`<p class="footnote">There's no growth guide for ${snake.species} yet, so only general advice is shown.</p>`}
+    <h2>Healthy growth</h2>
+    <div class="card">${GENERAL_TIPS.map((t) => h`<div class="row">${t}</div>`)}</div>
+    <p class="footnote">These are rough hobby guidelines, not veterinary advice. Individual snakes, lines and sexes grow at different rates.</p>`;
+}
+
+function growthOverviewView() {
+  const rank = { below: 0, above: 1, within: 2 };
+  const rows = M.sortedSnakes().filter(M.isInCollection).map((s) => ({ s, r: snakeReport(s) }))
+    .sort((a, b) => (rank[a.r.comparison] ?? 3) - (rank[b.r.comparison] ?? 3));
+  return h`${topbar("Growth Overview", { back: { href: "#/feeding", label: "Feeding" } })}
+    <div class="card">${rows.length ? rows.map(({ s, r }) => h`
+      <a class="row chevron" href="#/snake/${s.id}/growth">
+        ${thumb(s, "sm")}
+        <div class="grow">
+          <div><span class="name">${s.name}</span> ${comparisonBadge(r)}</div>
+          <div class="tiny">${s.species}${M.ageDescription(s) ? ` · ${M.ageDescription(s)}` : ""}${r.grams ? ` · ${formatWeight(r.grams)}` : " · no weight yet"}</div>
+          ${r.rate != null ? h`<div class="tiny accent">${formatRate(r.rate)}${r.target && r.weeksToTarget ? ` · breeding weight in ~${r.weeksToTarget} wk` : r.weeksToTarget === 0 ? " · at breeding weight" : ""}</div>` : ""}
+        </div>
+      </a>`) : h`<div class="row sub">No snakes yet.</div>`}</div>
+    <p class="footnote">Snakes below the typical range for their age are listed first. Log weights in each snake's care log.</p>`;
+}
+
+// MARK: - Breeding records
+
+const pct = (r) => (r == null ? "–" : `${Math.round(r * 100)}%`);
+
+function femaleWeights(id) {
+  return data.logs.filter((l) => l.snakeID === id && l.kind === "weight" && l.grams > 0).map((l) => ({ date: l.date, grams: l.grams }));
+}
+
+function breedingView() {
+  const seasons = seasonSummaries(data.pairings);
+  const femaleIDs = [...new Set(data.pairings.map((p) => p.femaleID).filter(Boolean))];
+  const females = femaleIDs.map((id) => ({ snake: M.snakeByID(id), history: femaleHistory(data.pairings.filter((p) => p.femaleID === id)) }))
+    .filter((f) => f.snake).sort((a, b) => b.history.clutches - a.history.clutches || a.snake.name.localeCompare(b.snake.name));
+  const clutches = data.pairings.filter((p) => p.layDate || p.eggCount != null)
+    .sort((a, b) => b.season - a.season || (b.layDate ?? "").localeCompare(a.layDate ?? ""));
+  const stat = (label, value) => h`<div style="flex:1;min-width:70px;text-align:center"><div class="name" style="font-size:20px">${value}</div><div class="tiny">${label}</div></div>`;
+  return h`${topbar("Breeding Records", { back: { href: "#/pairings", label: "Pairings" } })}
+    ${seasons.length ? seasons.map((s) => h`
+      <h2>${s.season} season</h2>
+      <div class="card"><div class="row" style="flex-wrap:wrap">
+        ${stat("Pairings", s.pairings)}${stat("Clutches", s.clutches)}${stat("Eggs", s.eggs)}${stat("Hatched", s.hatched)}${stat("Hatch rate", pct(s.hatchRate))}
+      </div></div>`) : h`<div class="empty"><div class="big">🥚</div><p>No breeding records yet. Add pairings (past ones too) in the Pairings tab and fill in their clutch details.</p></div>`}
+    ${females.length ? h`<h2>Females</h2><div class="card">${females.map(({ snake, history }) => h`
+      <a class="row chevron" href="#/snake/${snake.id}">${thumb(snake, "sm")}
+        <div class="grow"><div class="name">${snake.name}</div>
+          <div class="tiny">${plural(history.clutches, "clutch")}${history.averageClutch != null ? ` · avg ${history.averageClutch.toFixed(1)} eggs` : ""} · ${history.hatched} hatched${history.lastClutchSeason ? ` · last ${history.lastClutchSeason}` : ""}</div>
+        </div></a>`)}</div>` : ""}
+    ${clutches.length ? h`<h2>Clutches</h2><div class="card">${clutches.map((p) => {
+      const c = clutchStats(p, femaleWeights(p.femaleID));
+      return h`<a class="row chevron" href="#/pairing/${p.id}">
+        <div class="grow"><div><span class="name">${p.season}</span> · ${M.pairingTitle(p)}</div>
+          <div class="tiny">${c.eggs ?? "?"} eggs${c.good != null ? ` · ${c.good} good` : ""}${c.hatched != null ? ` · ${c.hatched} hatched (${pct(c.hatchRate)})` : ""}${c.incubationDays != null ? ` · ${c.incubationDays} days` : ""}${p.incubationTempF ? ` · ${p.incubationTempF}°F` : ""}${c.femaleWeight ? ` · ♀ ${formatWeight(c.femaleWeight)}` : ""}</div>
+        </div></a>`;
+    })}</div>` : ""}
+    <p class="footnote">To record a past season, add a pairing with that season's year, set its status to Hatched, and fill in the dates and counts.</p>`;
+}
+
 // MARK: - Batch edit
 
 function batchForm() {
@@ -429,6 +613,8 @@ function snakeView(id) {
     </div>
 
     ${careLogSection(snake)}
+
+    ${growthSection(snake)}
 
     <h2>Health &amp; Concerns</h2>
     <div class="card">
@@ -651,7 +837,6 @@ function careLogSection(snake) {
   return h`<h2>Care Log</h2>
     <div class="card">
       ${shed ? h`<div class="row"><span class="grow">Last shed</span><span class="value">${daysAgo(shed.date)}</span></div>` : ""}
-      ${weightChart(M.weightsFor(snake))}
       ${logs.slice(0, 3).map(logRow)}
       <div class="row" style="gap:6px;flex-wrap:wrap">
         ${["shed", "weight", "cleaning", "medication", "note"].map((k) => h`<button class="btn secondary" style="min-height:36px;padding:0 10px;font-size:14px" data-action="log-care" data-id="${snake.id}" data-kind="${k}">${M.LOG_KINDS[k].icon} ${k === "cleaning" ? "Cleaned" : k === "medication" ? "Meds" : M.LOG_KINDS[k].label}</button>`)}
@@ -866,6 +1051,8 @@ function feedingView() {
     rank[M.feedingStatus(a)] - rank[M.feedingStatus(b)] || (M.nextFeeding(a) ?? "").localeCompare(M.nextFeeding(b) ?? ""));
   if (!snakes.length) return h`${topbar("Feeding")}<div class="empty"><div class="big">🍽</div><p>Nothing to feed yet. Add snakes in the Collection tab.</p></div>`;
   return h`${topbar("Feeding")}
+    <div class="card"><a class="row chevron" href="#/growth"><span class="grow">📈 Growth Overview</span><span class="value">weight vs age</span></a></div>
+    <h2>Feeding schedule</h2>
     <div class="card">${snakes.map((snake) => {
       const status = M.feedingStatus(snake);
       const meal = M.lastMeal(snake);
@@ -1003,7 +1190,10 @@ function photoViewer(photo) {
 function pairingsView() {
   const seasons = [...new Set(data.pairings.map((p) => p.season))].sort((a, b) => b - a);
   return h`${topbar("Pairings", { action: h`<button class="icon-btn" data-action="add-pairing" aria-label="New pairing">＋</button>` })}
-    <div class="card"><a class="row chevron" href="#/finder"><span class="grow">🔎 Pairing Finder</span></a></div>
+    <div class="card">
+      <a class="row chevron" href="#/finder"><span class="grow">🔎 Pairing Finder</span></a>
+      <a class="row chevron" href="#/breeding"><span class="grow">🥚 Breeding Records</span><span class="value">past clutches &amp; stats</span></a>
+    </div>
     <p class="footnote">Rank every possible pairing in your collection by the odds of producing a target gene.</p>
     ${seasons.length ? seasons.map((season) => h`
       <h2>${season}</h2>
@@ -1038,6 +1228,14 @@ function pairingView(id) {
       ${p.eggCount != null ? h`<div class="row"><span class="grow">Clutch</span><span class="value">${p.fertileEggCount != null ? `${p.fertileEggCount} good of ${p.eggCount}` : p.eggCount}</span></div>` : ""}
       ${hatch && !p.hatchDate ? h`<div class="row"><span class="grow">Est. hatch</span><span class="value">~${formatDate(hatch)}</span></div>` : ""}
       ${row("Hatched", p.hatchDate)}
+      ${(() => {
+        const c = clutchStats(p, female ? femaleWeights(female.id) : []);
+        return h`
+          ${c.hatched != null ? h`<div class="row"><span class="grow">Hatched / born</span><span class="value">${c.hatched}${c.hatchRate != null ? ` (${pct(c.hatchRate)})` : ""}</span></div>` : ""}
+          ${c.incubationDays != null ? h`<div class="row"><span class="grow">Incubation</span><span class="value">${c.incubationDays} days${p.incubationTempF ? ` at ${p.incubationTempF}°F` : ""}</span></div>`
+            : p.incubationTempF ? h`<div class="row"><span class="grow">Incubation temp</span><span class="value">${p.incubationTempF}°F</span></div>` : ""}
+          ${c.femaleWeight ? h`<div class="row"><span class="grow">♀ weight at pairing</span><span class="value">${formatWeight(c.femaleWeight)}</span></div>` : ""}`;
+      })()}
     </div>
     ${(() => {
       const babies = female && male ? M.sortedSnakes().filter((s) => s.damID === female.id && s.sireID === male.id) : [];
@@ -1080,7 +1278,9 @@ function pairingForm(pairing, preset = {}) {
         ${dateField("Laid / born", "layDate")}
         ${field("Eggs / babies", h`<input type="number" inputmode="numeric" min="0" name="eggCount" value="${draft.eggCount ?? ""}" placeholder="–">`)}
         ${field("Good / fertile", h`<input type="number" inputmode="numeric" min="0" name="fertileEggCount" value="${draft.fertileEggCount ?? ""}" placeholder="–">`)}
+        ${field("Incubation °F", h`<input type="number" inputmode="decimal" min="60" max="100" step="0.1" name="incubationTempF" value="${draft.incubationTempF ?? ""}" placeholder="e.g. 88.5">`)}
         ${dateField("Hatched", "hatchDate")}
+        ${field("Hatched / born", h`<input type="number" inputmode="numeric" min="0" name="hatchedCount" value="${draft.hatchedCount ?? ""}" placeholder="–">`)}
       </div>
       <h2>Notes</h2>
       <div class="card"><label class="field stack"><textarea name="notes">${draft.notes}</textarea></label></div>`,
@@ -1091,7 +1291,8 @@ function pairingForm(pairing, preset = {}) {
       Object.assign(draft, {
         femaleID: f.femaleID.value, maleID: f.maleID.value, season: Number(f.season.value) || new Date().getFullYear(),
         status: f.status.value, lockCount: Number(f.lockCount.value) || 0, eggCount: num(f.eggCount.value),
-        fertileEggCount: num(f.fertileEggCount.value), notes: f.notes.value,
+        fertileEggCount: num(f.fertileEggCount.value), hatchedCount: num(f.hatchedCount.value),
+        incubationTempF: num(f.incubationTempF.value), notes: f.notes.value,
       });
       for (const name of ["introducedDate", "lastLockDate", "ovulationDate", "preLayShedDate", "layDate", "hatchDate"]) draft[name] = date(name);
       await save("pairings", draft);
