@@ -99,6 +99,7 @@ struct FeedingLogView: View {
         target.refused = refused
         target.notes = notes
         if let snakeWeightGrams { snake.weightGrams = snakeWeightGrams }
+        context.saveNow()
         dismiss()
     }
 }
@@ -145,6 +146,7 @@ struct FeedingHistoryView: View {
                 }
                 .onDelete { offsets in
                     for index in offsets { context.delete(records[index]) }
+                    context.saveNow()
                 }
             }
         }

@@ -81,6 +81,7 @@ struct PhotoSection: View {
         let photo = SnakePhoto(imageData: prepared.image, thumbnailData: prepared.thumbnail)
         context.insert(photo)
         photo.snake = snake
+        context.saveNow()
     }
 }
 
@@ -111,6 +112,7 @@ struct PhotoViewer: View {
                 .frame(height: 140)
             }
             .navigationTitle(snake.name)
+            .onDisappear { context.saveNow() }  // caption and date edits
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
@@ -118,6 +120,7 @@ struct PhotoViewer: View {
                     Button {
                         for other in snake.photos { other.isCover = false }
                         photo.isCover = true
+                        context.saveNow()
                     } label: {
                         Label("Set as Cover", systemImage: photo.isCover ? "star.fill" : "star")
                     }
@@ -128,6 +131,7 @@ struct PhotoViewer: View {
                     Spacer()
                     Button(role: .destructive) {
                         context.delete(photo)
+                        context.saveNow()
                         dismiss()
                     } label: {
                         Label("Delete", systemImage: "trash")

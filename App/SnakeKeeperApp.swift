@@ -7,18 +7,14 @@ struct SnakeKeeperApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [
-            Snake.self,
-            FeedingRecord.self,
-            SnakePhoto.self,
-            Concern.self,
-            Pairing.self,
-            CustomGene.self,
-        ])
+        .modelContainer(Persistence.shared.container)
     }
 }
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         TabView {
             SnakeListView()
@@ -31,6 +27,21 @@ struct ContentView: View {
                 .tabItem { Label("Genetics", systemImage: "square.grid.3x3") }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Last chance to write before Playgrounds or iPadOS stops the app.
+            if phase != .active { context.saveNow() }
+        }
+        .safeAreaInset(edge: .top) {
+            if Persistence.shared.isTemporary {
+                Label("Data can't be saved on this device right now. See Settings → Storage.",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .padding(8)
+                    .frame(maxWidth: .infinity)
+                    .background(.red.opacity(0.15))
+                    .foregroundStyle(.red)
+            }
         }
     }
 }

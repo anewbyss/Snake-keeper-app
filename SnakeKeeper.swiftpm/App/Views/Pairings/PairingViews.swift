@@ -34,6 +34,7 @@ struct PairingsListView: View {
                         .onDelete { offsets in
                             let inSeason = pairings.filter { $0.season == season }
                             for index in offsets { context.delete(inSeason[index]) }
+                            context.saveNow()
                         }
                     }
                 }
@@ -200,6 +201,7 @@ struct PairingEditView: View {
         target.fertileEggCount = fertileEggCount
         target.hatchDate = hatchDate
         target.notes = notes
+        context.saveNow()
         dismiss()
     }
 }

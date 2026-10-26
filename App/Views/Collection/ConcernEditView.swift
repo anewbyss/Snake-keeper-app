@@ -59,6 +59,7 @@ struct ConcernEditView: View {
                 Section {
                     Button("Delete Concern", role: .destructive) {
                         context.delete(concern)
+                        context.saveNow()
                         dismiss()
                     }
                 }
@@ -92,6 +93,7 @@ struct ConcernEditView: View {
         target.vetVisit = vetVisit
         target.isResolved = isResolved
         target.resolvedDate = isResolved ? max(resolvedDate, dateNoted) : nil
+        context.saveNow()
         dismiss()
     }
 }

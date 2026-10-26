@@ -49,6 +49,7 @@ struct SnakeListView: View {
                         }
                         .onDelete { offsets in
                             for index in offsets { context.delete(filtered[index]) }
+                            context.saveNow()
                         }
                     }
                     .overlay {

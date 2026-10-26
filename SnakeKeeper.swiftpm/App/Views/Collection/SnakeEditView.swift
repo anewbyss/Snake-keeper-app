@@ -144,6 +144,7 @@ struct SnakeEditView: View {
         target.feedingIntervalDays = feedingIntervalDays
         target.traits = traits
         target.notes = notes
+        context.saveNow()
         dismiss()
     }
 }

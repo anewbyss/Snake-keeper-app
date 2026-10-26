@@ -12,6 +12,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                StorageSection()
                 ExportSection()
 
                 Section {
@@ -27,6 +28,7 @@ struct SettingsView: View {
                     }
                     .onDelete { offsets in
                         for index in offsets { context.delete(customGenes[index]) }
+                        context.saveNow()
                     }
                     Button { showingNew = true } label: {
                         Label("Add Custom Gene", systemImage: "plus.circle")
@@ -181,6 +183,7 @@ struct CustomGeneEditView: View {
         target.superName = inheritance == .recessive ? "" : superName.trimmingCharacters(in: .whitespaces)
         target.locus = locus
         target.warning = warning.trimmingCharacters(in: .whitespaces)
+        context.saveNow()
         dismiss()
     }
 }

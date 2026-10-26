@@ -3,6 +3,7 @@ import SwiftData
 import SnakeGenetics
 
 struct SnakeDetailView: View {
+    @Environment(\.modelContext) private var context
     @Query private var customGenes: [CustomGene]
     @Query(sort: \Snake.name) private var allSnakes: [Snake]
 
@@ -138,6 +139,7 @@ struct SnakeDetailView: View {
                         Button("Resolve") {
                             concern.isResolved = true
                             concern.resolvedDate = .now
+                            context.saveNow()
                         }
                         .tint(.green)
                     }
