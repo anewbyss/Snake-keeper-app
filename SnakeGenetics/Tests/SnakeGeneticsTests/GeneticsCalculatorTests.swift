@@ -124,3 +124,27 @@ final class GeneticsCalculatorTests: XCTestCase {
         XCTAssertEqual(ids.count, Set(ids).count)
     }
 }
+
+final class BatchGeneChangeTests: XCTestCase {
+    let calculator = GeneticsCalculator(genes: GeneLibrary.allGenes)
+
+    func testSetAddsOrChangesCopies() {
+        let change = BatchGeneChange.set(geneID: "bp.clown", zygosity: .single)
+        XCTAssertEqual(change.apply(to: [])?.map(\.geneID), ["bp.clown"])
+        XCTAssertNil(change.apply(to: [TraitEntry(geneID: "bp.clown", zygosity: .single)]))
+        let visual = BatchGeneChange.set(geneID: "bp.clown", zygosity: .double)
+        XCTAssertEqual(visual.apply(to: [TraitEntry(geneID: "bp.clown", zygosity: .single)])?.first?.zygosity, .double)
+    }
+
+    func testRemove() {
+        let change = BatchGeneChange.remove(geneID: "bp.pastel")
+        XCTAssertEqual(change.apply(to: [TraitEntry(geneID: "bp.pastel", zygosity: .single)])?.count, 0)
+        XCTAssertNil(change.apply(to: []))
+    }
+
+    func testInvalidResultIsCaughtByValidation() throws {
+        let traits = [TraitEntry(geneID: "bp.lesser", zygosity: .single), TraitEntry(geneID: "bp.mojave", zygosity: .single)]
+        let result = try XCTUnwrap(BatchGeneChange.set(geneID: "bp.butter", zygosity: .single).apply(to: traits))
+        XCTAssertThrowsError(try calculator.validate(result))
+    }
+}

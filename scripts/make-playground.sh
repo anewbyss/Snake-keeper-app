@@ -12,6 +12,8 @@ mkdir -p "$OUT"
 cp -R App "$OUT/App"
 cp -R SnakeGenetics/Sources/SnakeGenetics "$OUT/Genetics"
 rm -f "$OUT/App/Info.plist"
+# Playgrounds keeps the asset catalog (app icon) at the package root.
+mv "$OUT/App/Assets.xcassets" "$OUT/Assets.xcassets"
 find "$OUT" -name '*.swift' -exec sed -i.bak '/^import SnakeGenetics$/d' {} +
 find "$OUT" -name '*.bak' -delete
 
@@ -36,7 +38,7 @@ let package = Package(
             bundleIdentifier: "com.example.snakekeeper",
             displayVersion: "1.0",
             bundleVersion: "1",
-            appIcon: .placeholder(icon: .leaf),
+            appIcon: .asset("AppIcon"),
             accentColor: .presetColor(.green),
             supportedDeviceFamilies: [
                 .pad,

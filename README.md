@@ -49,6 +49,9 @@ Both apps have the same features:
   origin (bred by me / purchased / traded / rescue / wild caught) with breeder or locality details,
   acquired date, weight, genes and notes. Search, filter by species, sex or status, and sort.
   Sold and deceased animals are hidden unless you ask for them.
+- **Batch edit**: tap **Select** in the Collection, pick several snakes, then add, change or remove
+  a gene (or set their status) on all of them at once. Snakes the change would make impossible are
+  skipped and named.
 - **Care log**: sheds, weights (with a trend chart), enclosure cleanings, medications and notes.
 - **Feeding**: log meals (prey type, size, F/T / pre-killed / live, count, weight) or refusals. Shows
   the last meal, next due date, refusal streaks and acceptance rate. The Feeding tab lists every

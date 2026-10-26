@@ -148,3 +148,28 @@ public enum Percent {
         "\(Int((probability * 100 + 1e-9).rounded(.down)))%"
     }
 }
+
+/// One gene change applied to many snakes at once (batch edit).
+public enum BatchGeneChange: Equatable, Sendable {
+    /// Add the gene, or change how many copies the snake carries.
+    case set(geneID: String, zygosity: Zygosity)
+    case remove(geneID: String)
+
+    /// The new traits, or `nil` when this snake doesn't need changing.
+    public func apply(to traits: [TraitEntry]) -> [TraitEntry]? {
+        var result = traits
+        switch self {
+        case .set(let geneID, let zygosity):
+            if let index = result.firstIndex(where: { $0.geneID == geneID }) {
+                guard result[index].zygosity != zygosity else { return nil }
+                result[index].zygosity = zygosity
+            } else {
+                result.append(TraitEntry(geneID: geneID, zygosity: zygosity))
+            }
+        case .remove(let geneID):
+            guard result.contains(where: { $0.geneID == geneID }) else { return nil }
+            result.removeAll { $0.geneID == geneID }
+        }
+        return result
+    }
+}

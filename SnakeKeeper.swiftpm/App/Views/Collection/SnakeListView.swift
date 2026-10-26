@@ -22,6 +22,10 @@ struct SnakeListView: View {
     @State private var collectionFilter = CollectionFilter.current
     @State private var sort = CollectionSort.name
     @State private var showingAdd = false
+    @State private var selecting = false
+    @State private var selected: Set<UUID> = []
+    @State private var showingBatch = false
+    @State private var batchApplied = false
 
     private var catalog: GeneCatalog { GeneCatalog(custom: customGenes) }
 
@@ -69,6 +73,14 @@ struct SnakeListView: View {
         }
     }
 
+    private func toggle(_ snake: Snake) {
+        if selected.contains(snake.id) {
+            selected.remove(snake.id)
+        } else {
+            selected.insert(snake.id)
+        }
+    }
+
     private var speciesInCollection: [String] {
         Array(Set(snakes.map(\.species))).sorted()
     }
@@ -78,7 +90,11 @@ struct SnakeListView: View {
             Group {
                 if snakes.isEmpty {
                     ContentUnavailableView {
-                        Label("No snakes yet", systemImage: "lizard")
+                        Label {
+                            Text("No snakes yet")
+                        } icon: {
+                            SnakeGlyph().frame(width: 64, height: 64)
+                        }
                     } description: {
                         Text("Add your first animal to start tracking meals, health and pairings.")
                     } actions: {
@@ -88,8 +104,22 @@ struct SnakeListView: View {
                 } else {
                     List {
                         ForEach(filtered) { snake in
-                            NavigationLink(value: snake) {
-                                SnakeRowView(snake: snake, morph: catalog.describe(snake.traits))
+                            if selecting {
+                                Button { toggle(snake) } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: selected.contains(snake.id) ? "checkmark.circle.fill" : "circle")
+                                            .font(.title2)
+                                            .foregroundStyle(selected.contains(snake.id) ? Color.accentColor : .secondary)
+                                        SnakeRowView(snake: snake, morph: catalog.describe(snake.traits))
+                                    }
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(selected.contains(snake.id) ? .isSelected : [])
+                            } else {
+                                NavigationLink(value: snake) {
+                                    SnakeRowView(snake: snake, morph: catalog.describe(snake.traits))
+                                }
                             }
                         }
                         .onDelete { offsets in
@@ -130,12 +160,51 @@ struct SnakeListView: View {
                               : "line.3.horizontal.decrease.circle.fill")
                     }
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showingAdd = true } label: { Label("Add Snake", systemImage: "plus") }
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if !snakes.isEmpty {
+                        Button(selecting ? "Done" : "Select") {
+                            selecting.toggle()
+                            selected = []
+                        }
+                    }
+                    if !selecting {
+                        Button { showingAdd = true } label: { Label("Add Snake", systemImage: "plus") }
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if selecting {
+                    let allVisible = !filtered.isEmpty && filtered.allSatisfy { selected.contains($0.id) }
+                    HStack {
+                        Button(allVisible ? "Select None" : "Select All") {
+                            selected = allVisible ? [] : Set(filtered.map(\.id))
+                        }
+                        Spacer()
+                        Text(selected.isEmpty ? "Tap snakes to select" : "\(selected.count) selected")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Edit \(selected.isEmpty ? "" : String(selected.count))") { showingBatch = true }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(selected.isEmpty)
+                    }
+                    .padding()
+                    .background(.bar)
                 }
             }
             .sheet(isPresented: $showingAdd) {
                 NavigationStack { SnakeEditView(snake: nil) }
+            }
+            .sheet(isPresented: $showingBatch, onDismiss: {
+                // Leave select mode once a batch edit has been applied.
+                if batchApplied {
+                    batchApplied = false
+                    selecting = false
+                    selected = []
+                }
+            }) {
+                NavigationStack {
+                    BatchEditView(snakes: snakes.filter { selected.contains($0.id) }) { batchApplied = true }
+                }
             }
         }
     }
@@ -203,11 +272,11 @@ struct SnakeThumbnail: View {
             if let photo, let image = UIImage(data: photo.thumbnailData) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                Image(systemName: "lizard.fill")
-                    .font(.system(size: size * 0.4))
-                    .foregroundStyle(.secondary)
+                SnakeGlyph()
+                    .padding(size * 0.14)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(.secondarySystemBackground))
+                    .accessibilityHidden(true)
             }
         }
         .frame(width: size, height: size)

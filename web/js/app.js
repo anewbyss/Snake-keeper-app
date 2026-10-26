@@ -8,12 +8,16 @@ import * as M from "./model.js";
 import { buildSyncFile, parseSyncFile, planMerge, describeSummary } from "./sync.js";
 import { xlsxBlob, csv } from "./xlsx.js";
 import { workbookSheets } from "./export.js";
+import { applyBatch } from "./batch.js";
 
 const app = document.getElementById("app");
 
 // View state that should survive re-renders.
 const ui = {
   search: "",
+  selecting: false,
+  selected: new Set(),
+  visibleIDs: [],
   status: "current",
   sort: "name",
   speciesFilter: "",
@@ -120,13 +124,17 @@ function sexMark(sex) {
   return h`<span class="sex-${sex}">${M.SEX[sex]?.symbol ?? "?"}</span>`;
 }
 
-function snakeRow(snake, href = `#/snake/${snake.id}`) {
+function snakeRow(snake, href = `#/snake/${snake.id}`, { selectable = false, checked = false } = {}) {
   const cat = M.catalog();
   const status = M.feedingStatus(snake);
   const days = M.daysSinceMeal(snake);
   const age = M.ageDescription(snake);
+  const open = selectable
+    ? h`<button class="row" data-action="toggle-select" data-id="${snake.id}" role="checkbox" aria-checked="${checked}">
+        <span class="check ${checked ? "on" : ""}" aria-hidden="true">${checked ? "✓" : ""}</span>`
+    : h`<a class="row" href="${href}">`;
   return h`
-    <a class="row" href="${href}">
+    ${open}
       ${thumb(snake)}
       <div class="grow">
         <div><span class="name">${snake.name}</span> ${sexMark(snake.sex)} ${M.openConcerns(snake).length ? h`<span class="warn" title="Open concerns">⚠︎</span>` : ""} ${statusBadge(snake)}</div>
@@ -136,7 +144,7 @@ function snakeRow(snake, href = `#/snake/${snake.id}`) {
       <div class="tiny status-${status}" style="text-align:right" title="${M.FEEDING_STATUS_LABEL[status]}">
         ●<br>${days != null ? `${days}d` : ""}
       </div>
-    </a>`;
+    ${raw(selectable ? "</button>" : "</a>")}`;
 }
 
 function outcomeList(result, clutch) {
@@ -246,7 +254,10 @@ function collectionView() {
     drawList();
   });
 
-  const add = h`<button class="icon-btn" data-action="add-snake" aria-label="Add snake">＋</button>`;
+  const add = ui.selecting
+    ? h`<button class="icon-btn" style="font-size:17px" data-action="end-select">Done</button>`
+    : h`<span style="display:flex">${data.snakes.length ? h`<button class="icon-btn" style="font-size:17px" data-action="start-select">Select</button>` : ""}
+        <button class="icon-btn" data-action="add-snake" aria-label="Add snake">＋</button></span>`;
   if (!data.snakes.length) {
     return h`${topbar("Collection", { action: add })}
       <div class="empty"><div class="big">🐍</div><p><strong>No snakes yet</strong><br>Add your first animal to start tracking meals, health and pairings.</p>
@@ -263,7 +274,8 @@ function collectionView() {
       <select id="status-filter" aria-label="Status filter">${options([["current", "In collection"], ...Object.entries(M.STATUS).map(([k, v]) => [k, v.label]), ["all", "All, incl. sold"]], ui.status)}</select>
       <select id="sort" aria-label="Sort">${options([["name", "Sort: Name"], ["fed", "Sort: Feeding due"], ["age", "Sort: Oldest first"], ["newest", "Sort: Recently added"]], ui.sort)}</select>
     </div>
-    <div id="snake-list" class="card" style="margin-top:8px"></div>`;
+    <div id="snake-list" class="card" style="margin-top:8px"></div>
+    ${ui.selecting ? h`<div style="height:64px"></div><div class="select-bar" id="select-bar"></div>` : ""}`;
 }
 
 function drawList() {
@@ -283,7 +295,86 @@ function drawList() {
     && (!ui.speciesFilter || s.species === ui.speciesFilter)
     && (!ui.sexFilter || s.sex === ui.sexFilter)
     && (!q || s.name.toLowerCase().includes(q) || s.species.toLowerCase().includes(q) || cat.describe(s.traits).toLowerCase().includes(q)));
-  list.innerHTML = snakes.length ? h`${snakes.map((s) => snakeRow(s))}`.html : h`<div class="empty">No matches</div>`.html;
+  ui.visibleIDs = snakes.map((s) => s.id);
+  list.innerHTML = snakes.length
+    ? h`${snakes.map((s) => snakeRow(s, undefined, { selectable: ui.selecting, checked: ui.selected.has(s.id) }))}`.html
+    : h`<div class="empty">No matches</div>`.html;
+  const bar = document.getElementById("select-bar");
+  if (bar) {
+    const count = ui.selected.size;
+    const allVisible = snakes.length > 0 && snakes.every((s) => ui.selected.has(s.id));
+    bar.innerHTML = h`
+      <button class="btn secondary" data-action="${allVisible ? "select-none" : "select-all"}">${allVisible ? "Select None" : "Select All"}</button>
+      <span class="grow" style="text-align:center">${count ? `${count} selected` : "Tap snakes to select"}</span>
+      <button class="btn" data-action="batch-edit" ${count ? "" : "disabled"}>Edit ${count || ""}</button>`.html;
+  }
+}
+
+// MARK: - Batch edit
+
+function batchForm() {
+  const snakes = [...ui.selected].map(M.snakeByID).filter(Boolean);
+  if (!snakes.length) return;
+  const cat = M.catalog();
+  const speciesList = [...new Set(snakes.map((s) => s.species))];
+  // Only genes every selected species can carry.
+  const geneLists = speciesList.map((sp) => cat.genesFor(sp));
+  const genes = geneLists[0].filter((g) => geneLists.every((list) => list.some((o) => o.id === g.id)));
+  const form = openSheet({
+    title: `Edit ${plural(snakes.length, "Snake")}`,
+    submitLabel: "Apply",
+    body: h`
+      <p class="footnote" style="margin-top:12px">${snakes.map((s) => s.name).join(", ")}</p>
+      <h2>Gene</h2>
+      <div class="card">
+        ${genes.length ? h`
+          ${field("Gene", h`<select name="geneID"><option value="">Don't change genes</option>${Object.entries(INHERITANCE).map(([key, label]) => {
+            const list = genes.filter((g) => g.inheritance === key);
+            return list.length ? h`<optgroup label="${label}">${list.map((g) => h`<option value="${g.id}">${g.name}</option>`)}</optgroup>` : "";
+          })}</select>`)}
+          <div class="field"><span>Action</span><div class="segmented">
+            <label><input type="radio" name="mode" value="set" checked>Add / set</label>
+            <label><input type="radio" name="mode" value="remove">Remove</label>
+          </div></div>
+          <label class="field" id="zygosity-row"><span>Copies</span><select name="zygosity"></select></label>`
+        : h`<div class="row sub">${speciesList.length > 1 ? "The selected snakes are different species with no genes in common." : "No genes for this species. Add custom genes in Settings."}</div>`}
+      </div>
+      <p class="footnote">Snakes the change would make impossible (e.g. a third gene at the same locus) are skipped and listed.</p>
+      <h2>Status</h2>
+      <div class="card">
+        ${field("Status", h`<select name="status"><option value="">Don't change</option>${options(Object.entries(M.STATUS).map(([k, v]) => [k, v.label]), "")}</select>`)}
+      </div>`,
+    onSubmit: async (f) => {
+      const change = {};
+      const geneID = f.geneID?.value;
+      if (geneID) {
+        const mode = f.mode.value;
+        const choice = mode === "set" ? zygosityOptions(cat.byID[geneID])[Number(f.zygosity.value)] : null;
+        change.gene = { geneID, mode, ...(choice ? { zygosity: choice.zygosity, probability: choice.probability } : {}) };
+      }
+      if (f.status.value) change.status = f.status.value;
+      if (!change.gene && !change.status) { toast("Choose a gene or a status to change."); return false; }
+      const { updated, skipped } = applyBatch(snakes, change, cat.calculator);
+      await save("snakes", updated);
+      let message = updated.length ? `Updated ${plural(updated.length, "snake")}` : "Nothing needed changing";
+      if (skipped.length) message += ` · skipped ${skipped.map((x) => x.snake.name).join(", ")} (gene limit)`;
+      toast(message);
+      ui.selecting = false;
+      ui.selected.clear();
+      refresh();
+    },
+  });
+  const updateZygosity = () => {
+    const gene = cat.byID[form.geneID?.value];
+    const setMode = form.querySelector('input[name="mode"]:checked')?.value === "set";
+    const row = form.querySelector("#zygosity-row");
+    if (!row) return;
+    row.hidden = !gene || !setMode;
+    if (gene) form.zygosity.innerHTML = h`${zygosityOptions(gene).map((o, i) => h`<option value="${i}">${o.label}</option>`)}`.html;
+  };
+  form.geneID?.addEventListener("change", updateZygosity);
+  form.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", updateZygosity));
+  updateZygosity();
 }
 
 function snakeView(id) {
@@ -1297,6 +1388,16 @@ async function importSync() {
 
 const actions = {
   "add-snake": () => snakeForm(null),
+  "start-select": () => { ui.selecting = true; ui.selected.clear(); refresh(); },
+  "end-select": () => { ui.selecting = false; ui.selected.clear(); refresh(); },
+  "toggle-select": ({ id }) => {
+    if (ui.selected.has(id)) ui.selected.delete(id);
+    else ui.selected.add(id);
+    drawList();
+  },
+  "select-all": () => { ui.visibleIDs.forEach((id) => ui.selected.add(id)); drawList(); },
+  "select-none": () => { ui.selected.clear(); drawList(); },
+  "batch-edit": batchForm,
   "edit-snake": ({ id }) => snakeForm(M.snakeByID(id)),
   "delete-snake": async ({ id }) => {
     const snake = M.snakeByID(id);
@@ -1362,7 +1463,12 @@ document.addEventListener("click", (event) => {
 });
 
 document.getElementById("sheet").addEventListener("close", () => { document.getElementById("sheet").innerHTML = ""; });
-window.addEventListener("hashchange", () => { closeSheet(); render(); window.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => {
+  closeSheet();
+  if (!location.hash.startsWith("#/collection")) { ui.selecting = false; ui.selected.clear(); }
+  render();
+  window.scrollTo(0, 0);
+});
 
 // MARK: - Start
 
