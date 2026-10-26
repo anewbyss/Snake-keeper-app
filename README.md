@@ -40,9 +40,16 @@ both directions to bring both apps fully up to date. The format is described in 
 
 ## Features
 
-- **Collection**: species, name/ID, sex, hatch date (exact or estimated) with auto-calculated age,
+Both apps have the same features:
+
+- **Profile**: breeder / business name, photo or logo, location and contact details, plus defaults
+  (species, feeding interval) for new snakes. Used in export file names; syncs between the apps.
+- **Collection**: 15 species, name/ID, sex, status (active, for sale, on hold, sold, deceased),
+  enclosure, dam and sire, hatch date (exact or estimated) with auto-calculated age,
   origin (bred by me / purchased / traded / rescue / wild caught) with breeder or locality details,
-  acquired date, weight, genes and notes. Search and filter by species or sex.
+  acquired date, weight, genes and notes. Search, filter by species, sex or status, and sort.
+  Sold and deceased animals are hidden unless you ask for them.
+- **Care log**: sheds, weights (with a trend chart), enclosure cleanings, medications and notes.
 - **Feeding**: log meals (prey type, size, F/T / pre-killed / live, count, weight) or refusals. Shows
   the last meal, next due date, refusal streaks and acceptance rate. The Feeding tab lists every
   snake by urgency (overdue, due, fed) and you can swipe to log a meal. New logs start with the
@@ -55,12 +62,13 @@ both directions to bring both apps fully up to date. The format is described in 
   a preview of the predicted offspring. The **Pairing Finder** ranks every female × male pair in
   your collection by the odds of producing a chosen gene.
 - **Pairing tracker**: planned → introduced → locks → ovulation → pre-lay shed → laid → hatched,
-  with egg counts and estimated lay and hatch dates.
+  with egg counts and estimated lay and hatch dates. **Add Hatchling** creates a baby with its
+  parents, species and clutch filled in; parents list their offspring.
 - **Genetics calculator**: pick species, load parents from your collection or enter genes by hand,
   and see every outcome with its percentage, expected count per clutch, het / possible-het odds and
   health notes (e.g. Spider wobble).
 - **Export to Excel / Google Sheets**: Settings → Export creates an `.xlsx` workbook with Snakes,
-  Feedings, Concerns and Pairings tabs, or one CSV per tab. Share it to Excel, Numbers, the Google
+  Feedings, Care Log, Concerns and Pairings tabs, or one CSV per tab. Share it to Excel, Numbers, the Google
   Sheets app, Google Drive, Files, AirDrop or Mail.
 
 ## Genetics engine
@@ -72,7 +80,9 @@ both directions to bring both apps fully up to date. The format is described in 
 - **Allelic genes** on a shared locus, with compound names: Lesser × Mojave → Blue Eyed Leucistic,
   Yellow Belly × Gravel → Highway, Amel × Ultra → Ultramel, and so on
 - Any number of genes at once (e.g. a triple-het × triple-het cross gives all 8 groups)
-- Built-in libraries for Ball Python (70+ genes), Corn Snake, Western Hognose and Boa
+- Built-in libraries for Ball Python (70+ genes), Boa, Burmese, Carpet and Reticulated Pythons,
+  California Kingsnake, Corn Snake, Kenyan Sand Boa, Milk Snake and Western Hognose; plus Blood,
+  Children's and Green Tree Pythons, Garter Snake and Rosy Boa for tracking without built-in genes
 - Custom genes for any species (Settings tab), including allelic links and health notes
 
 ```swift

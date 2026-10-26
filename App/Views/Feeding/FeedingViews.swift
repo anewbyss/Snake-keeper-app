@@ -98,7 +98,7 @@ struct FeedingLogView: View {
         target.preyWeightGrams = preyWeightGrams
         target.refused = refused
         target.notes = notes
-        if let snakeWeightGrams { snake.weightGrams = snakeWeightGrams }
+        if let snakeWeightGrams { snake.logWeight(snakeWeightGrams, on: date, in: context) }
         context.saveNow()
         dismiss()
     }
@@ -172,7 +172,7 @@ struct FeedingScheduleView: View {
     }
 
     private var sorted: [Snake] {
-        snakes.sorted {
+        snakes.filter(\.isInCollection).sorted {
             let (a, b) = (rank($0), rank($1))
             if a != b { return a < b }
             return ($0.nextFeedingDate ?? .distantPast) < ($1.nextFeedingDate ?? .distantPast)

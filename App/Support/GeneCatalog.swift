@@ -48,6 +48,8 @@ struct GeneCatalog {
     }
 
     static func incubationDays(for species: String) -> Int? {
-        GeneLibrary.speciesInfo(named: species)?.incubationDays ?? (species.isEmpty ? nil : 60)
+        // Built-in species know their incubation (nil for live-bearers); assume 60 days otherwise.
+        if let info = GeneLibrary.speciesInfo(named: species) { return info.incubationDays }
+        return species.isEmpty ? nil : 60
     }
 }

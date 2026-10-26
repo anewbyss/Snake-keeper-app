@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import SnakeGenetics
 
-/// Export data, browse the built-in gene library and manage custom genes.
+/// Profile, storage, sync and export, the built-in gene library and custom genes.
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \CustomGene.name) private var customGenes: [CustomGene]
@@ -12,6 +12,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section { ProfileRow() }
                 StorageSection()
                 SyncSection()
                 ExportSection()

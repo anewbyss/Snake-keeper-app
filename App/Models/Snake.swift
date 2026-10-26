@@ -60,6 +60,25 @@ enum Origin: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+/// Collection status. Sold and deceased animals are hidden from day-to-day lists.
+enum SnakeStatus: String, CaseIterable, Identifiable {
+    case active, forSale, onHold, sold, deceased
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .active: return "Active"
+        case .forSale: return "For Sale"
+        case .onHold: return "On Hold"
+        case .sold: return "Sold"
+        case .deceased: return "Deceased"
+        }
+    }
+
+    var isInCollection: Bool { self != .sold && self != .deceased }
+}
+
 enum FeedingStatus {
     case noRecord, fed, due, overdue
 }
@@ -80,6 +99,12 @@ final class Snake {
     /// JSON-encoded `[TraitEntry]`.
     var traitsData: Data = Data()
     var notes: String = ""
+    var statusRaw: String = SnakeStatus.active.rawValue
+    var statusNote: String = ""
+    /// Rack / tub / tank.
+    var enclosure: String = ""
+    var damID: UUID?
+    var sireID: UUID?
     var createdAt: Date = Date()
     /// Last edit, for sync.
     var updatedAt: Date = Date()
@@ -92,6 +117,9 @@ final class Snake {
 
     @Relationship(deleteRule: .cascade, inverse: \Concern.snake)
     var concerns: [Concern] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \LogEntry.snake)
+    var logs: [LogEntry] = []
 
     @Relationship(deleteRule: .nullify, inverse: \Pairing.male)
     var pairingsAsSire: [Pairing] = []
@@ -109,6 +137,13 @@ final class Snake {
         get { Sex(rawValue: sexRaw) ?? .unknown }
         set { sexRaw = newValue.rawValue }
     }
+
+    var status: SnakeStatus {
+        get { SnakeStatus(rawValue: statusRaw) ?? .active }
+        set { statusRaw = newValue.rawValue }
+    }
+
+    var isInCollection: Bool { status.isInCollection }
 
     var origin: Origin {
         get { Origin(rawValue: originRaw) ?? .other }
@@ -149,6 +184,33 @@ final class Snake {
             streak += 1
         }
         return streak
+    }
+
+    // MARK: Care log
+
+    var sortedLogs: [LogEntry] {
+        logs.sorted { $0.date > $1.date }
+    }
+
+    var weightLogs: [LogEntry] {
+        sortedLogs.filter { $0.kind == .weight && ($0.grams ?? 0) > 0 }
+    }
+
+    var lastShed: LogEntry? {
+        sortedLogs.first { $0.kind == .shed }
+    }
+
+    /// Logs a weight and keeps `weightGrams` equal to the latest logged weight.
+    func logWeight(_ grams: Double, on date: Date = .now, in context: ModelContext) {
+        let entry = LogEntry(date: date, kind: .weight, grams: grams)
+        context.insert(entry)
+        entry.snake = self
+        // Only the most recent weighing becomes the current weight.
+        if !weightLogs.contains(where: { $0 !== entry && $0.date > date }) { weightGrams = grams }
+    }
+
+    func syncWeightFromLog() {
+        if let latest = weightLogs.first?.grams { weightGrams = latest }
     }
 
     // MARK: Other

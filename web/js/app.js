@@ -14,6 +14,8 @@ const app = document.getElementById("app");
 // View state that should survive re-renders.
 const ui = {
   search: "",
+  status: "current",
+  sort: "name",
   speciesFilter: "",
   sexFilter: "",
   calc: { species: SPECIES[0].name, female: [], male: [], femaleName: null, maleName: null, clutch: 6 },
@@ -42,6 +44,7 @@ async function remove(store, ids) {
 
 async function deleteSnake(snake) {
   await remove("feedings", M.feedingsFor(snake).map((r) => r.id));
+  await remove("logs", M.logsFor(snake).map((r) => r.id));
   await remove("concerns", M.concernsFor(snake).map((r) => r.id));
   await remove("photos", M.photosFor(snake).map((r) => r.id));
   await remove("snakes", snake.id);
@@ -53,6 +56,8 @@ const routes = [
   [/^#\/collection$/, () => collectionView(), "collection"],
   [/^#\/snake\/([^/]+)$/, (id) => snakeView(id), "collection"],
   [/^#\/snake\/([^/]+)\/feedings$/, (id) => feedingHistoryView(id), "collection"],
+  [/^#\/snake\/([^/]+)\/log$/, (id) => logHistoryView(id), "collection"],
+  [/^#\/profile$/, () => profileView(), "settings"],
   [/^#\/feeding$/, () => feedingView(), "feeding"],
   [/^#\/pairings$/, () => pairingsView(), "pairings"],
   [/^#\/pairing\/([^/]+)$/, (id) => pairingView(id), "pairings"],
@@ -104,6 +109,13 @@ function thumb(snake, size = "") {
     : h`<div class="thumb ${size}" aria-hidden="true">🐍</div>`;
 }
 
+function statusBadge(snake) {
+  const status = M.statusOf(snake);
+  if (status === "active") return "";
+  const { label, color } = M.STATUS[status];
+  return h`<span class="badge" style="color:${color};background:color-mix(in srgb, ${color} 15%, transparent)">${label}</span>`;
+}
+
 function sexMark(sex) {
   return h`<span class="sex-${sex}">${M.SEX[sex]?.symbol ?? "?"}</span>`;
 }
@@ -117,9 +129,9 @@ function snakeRow(snake, href = `#/snake/${snake.id}`) {
     <a class="row" href="${href}">
       ${thumb(snake)}
       <div class="grow">
-        <div><span class="name">${snake.name}</span> ${sexMark(snake.sex)} ${M.openConcerns(snake).length ? h`<span class="warn" title="Open concerns">⚠︎</span>` : ""}</div>
+        <div><span class="name">${snake.name}</span> ${sexMark(snake.sex)} ${M.openConcerns(snake).length ? h`<span class="warn" title="Open concerns">⚠︎</span>` : ""} ${statusBadge(snake)}</div>
         <div class="sub ellipsis">${cat.describe(snake.traits)}</div>
-        <div class="tiny">${snake.species}${age ? ` · ${age}` : ""}</div>
+        <div class="tiny">${snake.species}${age ? ` · ${age}` : ""}${snake.enclosure ? ` · ${snake.enclosure}` : ""}</div>
       </div>
       <div class="tiny status-${status}" style="text-align:right" title="${M.FEEDING_STATUS_LABEL[status]}">
         ●<br>${days != null ? `${days}d` : ""}
@@ -229,6 +241,8 @@ function collectionView() {
     search?.addEventListener("input", () => { ui.search = search.value; drawList(); });
     document.getElementById("species-filter")?.addEventListener("change", (e) => { ui.speciesFilter = e.target.value; drawList(); });
     document.getElementById("sex-filter")?.addEventListener("change", (e) => { ui.sexFilter = e.target.value; drawList(); });
+    document.getElementById("status-filter")?.addEventListener("change", (e) => { ui.status = e.target.value; drawList(); });
+    document.getElementById("sort")?.addEventListener("change", (e) => { ui.sort = e.target.value; drawList(); });
     drawList();
   });
 
@@ -245,6 +259,10 @@ function collectionView() {
       <select id="species-filter" aria-label="Species filter"><option value="">All species</option>${options(species.map((s) => [s, s]), ui.speciesFilter)}</select>
       <select id="sex-filter" aria-label="Sex filter"><option value="">Any sex</option>${options(Object.entries(M.SEX).map(([k, v]) => [k, v.label]), ui.sexFilter)}</select>
     </div>
+    <div class="filters">
+      <select id="status-filter" aria-label="Status filter">${options([["current", "In collection"], ...Object.entries(M.STATUS).map(([k, v]) => [k, v.label]), ["all", "All, incl. sold"]], ui.status)}</select>
+      <select id="sort" aria-label="Sort">${options([["name", "Sort: Name"], ["fed", "Sort: Feeding due"], ["age", "Sort: Oldest first"], ["newest", "Sort: Recently added"]], ui.sort)}</select>
+    </div>
     <div id="snake-list" class="card" style="margin-top:8px"></div>`;
 }
 
@@ -253,8 +271,16 @@ function drawList() {
   if (!list) return;
   const cat = M.catalog();
   const q = ui.search.trim().toLowerCase();
-  const snakes = M.sortedSnakes().filter((s) =>
-    (!ui.speciesFilter || s.species === ui.speciesFilter)
+  const rank = { overdue: 0, due: 1, none: 2, fed: 3 };
+  const sorters = {
+    name: () => 0,
+    fed: (a, b) => rank[M.feedingStatus(a)] - rank[M.feedingStatus(b)] || (M.nextFeeding(a) ?? "").localeCompare(M.nextFeeding(b) ?? ""),
+    age: (a, b) => (a.hatchDate ?? "9999").localeCompare(b.hatchDate ?? "9999"),
+    newest: (a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
+  };
+  const snakes = M.sortedSnakes().sort(sorters[ui.sort] ?? sorters.name).filter((s) =>
+    (ui.status === "all" || (ui.status === "current" ? M.isInCollection(s) : M.statusOf(s) === ui.status))
+    && (!ui.speciesFilter || s.species === ui.speciesFilter)
     && (!ui.sexFilter || s.sex === ui.sexFilter)
     && (!q || s.name.toLowerCase().includes(q) || s.species.toLowerCase().includes(q) || cat.describe(s.traits).toLowerCase().includes(q)));
   list.innerHTML = snakes.length ? h`${snakes.map((s) => snakeRow(s))}`.html : h`<div class="empty">No matches</div>`.html;
@@ -273,23 +299,31 @@ function snakeView(id) {
   const photos = M.photosFor(snake);
   const info = M.speciesInfo(snake.species);
   const opposite = snake.sex === "male" ? "female" : snake.sex === "female" ? "male" : null;
-  const partners = opposite ? M.sortedSnakes().filter((s) => s.species === snake.species && s.sex === opposite) : [];
+  const partners = opposite ? M.sortedSnakes().filter((s) => s.species === snake.species && s.sex === opposite && M.isInCollection(s)) : [];
+  const dam = M.snakeByID(snake.damID), sire = M.snakeByID(snake.sireID);
+  const offspring = M.offspringOf(snake);
+  const lifeStatus = M.statusOf(snake);
 
   return h`
     ${topbar(snake.name, { back: { href: "#/collection", label: "Collection" }, action: h`<button class="icon-btn" style="font-size:17px" data-action="edit-snake" data-id="${snake.id}">Edit</button>` })}
     <div class="card"><div class="hero">${thumb(snake, "lg")}
-      <div><div class="morph">${cat.describe(snake.traits)}</div><div class="sub">${snake.species}</div>${info ? h`<div class="tiny"><em>${info.scientificName}</em></div>` : ""}</div>
+      <div><div class="morph">${cat.describe(snake.traits)}</div><div class="sub">${snake.species}</div>${info ? h`<div class="tiny"><em>${info.scientificName}</em></div>` : ""}
+        ${lifeStatus !== "active" ? h`<div style="margin-top:6px">${statusBadge(snake)}</div>` : ""}</div>
     </div></div>
 
     <h2>Details</h2>
     <div class="card">
       <div class="row"><span class="grow">Sex</span><span class="sex-${snake.sex}">${M.SEX[snake.sex].symbol} ${M.SEX[snake.sex].label}</span></div>
+      <div class="row"><span class="grow">Status</span><span class="value">${M.STATUS[lifeStatus].label}${snake.statusNote ? ` · ${snake.statusNote}` : ""}</span></div>
+      ${snake.enclosure ? h`<div class="row"><span class="grow">Enclosure</span><span class="value">${snake.enclosure}</span></div>` : ""}
       <div class="row"><span class="grow">Age</span><span class="value">${M.ageDescription(snake) ?? "Unknown"}</span></div>
       ${snake.hatchDate ? h`<div class="row"><span class="grow">Hatched</span><span class="value">${formatDate(snake.hatchDate)}${snake.hatchDateIsEstimate ? " (est.)" : ""}</span></div>` : ""}
       <div class="row"><span class="grow">Origin</span><span class="value">${M.ORIGIN[snake.origin]?.label ?? snake.origin}</span></div>
       ${snake.originDetails ? h`<div class="row"><span class="grow">${M.ORIGIN[snake.origin]?.prompt ?? "Details"}</span><span class="value">${snake.originDetails}</span></div>` : ""}
       ${snake.acquiredDate ? h`<div class="row"><span class="grow">Acquired</span><span class="value">${formatDate(snake.acquiredDate)}</span></div>` : ""}
       ${snake.weightGrams ? h`<div class="row"><span class="grow">Weight</span><span class="value">${formatWeight(snake.weightGrams)}</span></div>` : ""}
+      ${dam ? h`<a class="row chevron" href="#/snake/${dam.id}"><span class="grow">Dam ♀</span><span class="value">${dam.name}</span></a>` : ""}
+      ${sire ? h`<a class="row chevron" href="#/snake/${sire.id}"><span class="grow">Sire ♂</span><span class="value">${sire.name}</span></a>` : ""}
     </div>
 
     <h2>Feeding · every ${snake.feedingIntervalDays} days</h2>
@@ -302,6 +336,8 @@ function snakeView(id) {
       <button class="link-btn" data-action="log-feeding" data-id="${snake.id}">⊕ Log Feeding</button>
       ${feedings.length ? h`<a class="row chevron" href="#/snake/${snake.id}/feedings"><span class="grow">History</span><span class="value">${plural(feedings.length, "record")}</span></a>` : ""}
     </div>
+
+    ${careLogSection(snake)}
 
     <h2>Health &amp; Concerns</h2>
     <div class="card">
@@ -337,6 +373,8 @@ function snakeView(id) {
       ${M.pairingsFor(snake).map((p) => h`<a class="row chevron" href="#/pairing/${p.id}"><span class="grow">${M.PAIRING_STATUSES[p.status] ?? ""} ${p.season}: ${M.pairingTitle(p)} — ${p.status}</span></a>`)}
     </div>
 
+    ${offspring.length ? h`<h2>Offspring (${offspring.length})</h2><div class="card">${offspring.map((s) => snakeRow(s))}</div>` : ""}
+
     ${snake.notes ? h`<h2>Notes</h2><div class="card"><div class="row" style="white-space:pre-wrap">${snake.notes}</div></div>` : ""}
     <div class="card" style="margin-top:24px"><button class="link-btn danger" data-action="delete-snake" data-id="${snake.id}">Delete ${snake.name}</button></div>`;
 }
@@ -371,21 +409,37 @@ function feedingHistoryView(id) {
 
 // MARK: - Snake form
 
-function snakeForm(snake) {
+function snakeForm(snake, preset = {}) {
   const cat = M.catalog();
+  const p = M.profile();
   const draft = snake ? structuredClone(snake) : {
-    id: newID(), createdAt: now(), name: "", species: SPECIES[0].name, sex: "unknown", hatchDate: null,
-    hatchDateIsEstimate: false, origin: "purchased", originDetails: "", acquiredDate: null, weightGrams: null,
-    feedingIntervalDays: 7, traits: [], notes: "",
+    id: newID(), createdAt: now(), name: "", species: preset.species ?? p.defaultSpecies, sex: "unknown",
+    hatchDate: preset.hatchDate ?? null, hatchDateIsEstimate: false, origin: preset.origin ?? "purchased",
+    originDetails: preset.originDetails ?? "", acquiredDate: null, weightGrams: null,
+    feedingIntervalDays: p.defaultFeedingInterval || 7, traits: [], notes: "", status: "active", statusNote: "",
+    enclosure: "", damID: preset.damID ?? null, sireID: preset.sireID ?? null,
   };
+  draft.status = M.statusOf(draft);
+  draft.statusNote ??= "";
+  draft.enclosure ??= "";
+  const parentOptions = (sex, selected) => h`<option value="">None</option>${M.sortedSnakes()
+    .filter((s) => s.sex === sex && s.id !== draft.id && (s.species === draft.species || s.id === selected))
+    .map((s) => h`<option value="${s.id}" ${s.id === selected ? "selected" : ""}>${s.name}</option>`)}`.html;
+
   const form = openSheet({
-    title: snake ? `Edit ${snake.name}` : "New Snake",
+    title: snake ? `Edit ${snake.name}` : preset.damID ? "New Hatchling" : "New Snake",
     body: h`
       <h2>Identity</h2>
       <div class="card">
         ${field("Name or ID", h`<input name="name" value="${draft.name}" placeholder="Required" required>`)}
         ${field("Species", h`<select name="species">${options(cat.speciesNames.map((s) => [s, s]), draft.species)}</select>`)}
         <div class="field"><span>Sex</span><div class="segmented">${Object.entries(M.SEX).map(([k, v]) => h`<label><input type="radio" name="sex" value="${k}" ${k === draft.sex ? "checked" : ""}>${v.symbol} ${v.label}</label>`)}</div></div>
+      </div>
+      <h2>Status</h2>
+      <div class="card">
+        ${field("Status", h`<select name="status">${options(Object.entries(M.STATUS).map(([k, v]) => [k, v.label]), draft.status)}</select>`)}
+        ${field("Status note", h`<input name="statusNote" value="${draft.statusNote}" placeholder="Price, buyer, date…">`)}
+        ${field("Enclosure", h`<input name="enclosure" value="${draft.enclosure}" placeholder="Rack / tub / tank">`)}
       </div>
       <h2>Age</h2>
       <div class="card">
@@ -397,6 +451,8 @@ function snakeForm(snake) {
         ${field("Origin", h`<select name="origin">${options(Object.entries(M.ORIGIN).map(([k, v]) => [k, v.label]), draft.origin)}</select>`)}
         ${field(h`<span id="origin-prompt">${M.ORIGIN[draft.origin]?.prompt ?? "Details"}</span>`, h`<input name="originDetails" value="${draft.originDetails}">`)}
         ${field("Acquired", h`<input type="date" name="acquiredDate" max="${todayInput()}" value="${toDateInput(draft.acquiredDate)}">`)}
+        ${field("Dam ♀", h`<select name="damID"></select>`)}
+        ${field("Sire ♂", h`<select name="sireID"></select>`)}
       </div>
       <h2>Husbandry</h2>
       <div class="card">
@@ -412,20 +468,29 @@ function snakeForm(snake) {
       const name = f.name.value.trim();
       if (!name) { toast("Give your snake a name or ID."); return false; }
       if (traitsBox.dataset.valid === "false") { toast("Fix the gene error first."); return false; }
+      const weight = f.weightGrams.value ? Number(f.weightGrams.value) : null;
+      const weightChanged = weight != null && weight !== draft.weightGrams;
       Object.assign(draft, {
         name,
         species: f.species.value,
         sex: f.sex.value,
-        hatchDate: fromDateInput(f.hatchDate.value),
+        status: f.status.value,
+        statusNote: f.statusNote.value.trim(),
+        enclosure: f.enclosure.value.trim(),
+        hatchDate: f.hatchDate.value === toDateInput(draft.hatchDate) ? draft.hatchDate : fromDateInput(f.hatchDate.value),
         hatchDateIsEstimate: !!f.hatchDate.value && f.hatchDateIsEstimate.checked,
         origin: f.origin.value,
         originDetails: f.originDetails.value.trim(),
-        acquiredDate: fromDateInput(f.acquiredDate.value),
-        weightGrams: f.weightGrams.value ? Number(f.weightGrams.value) : null,
+        acquiredDate: f.acquiredDate.value === toDateInput(draft.acquiredDate) ? draft.acquiredDate : fromDateInput(f.acquiredDate.value),
+        damID: f.damID.value || null,
+        sireID: f.sireID.value || null,
+        weightGrams: weight,
         feedingIntervalDays: Math.min(60, Math.max(1, Number(f.feedingIntervalDays.value) || 7)),
         notes: f.notes.value,
       });
       await save("snakes", draft);
+      // Keep weight history: a new or changed weight goes into the care log too.
+      if (weightChanged) await logWeight(draft, weight, now());
       toast(snake ? "Saved" : `Added ${draft.name}`);
       if (!snake) location.hash = `#/snake/${draft.id}`;
       refresh();
@@ -435,9 +500,217 @@ function snakeForm(snake) {
   const preview = form.querySelector("#morph-preview");
   const showMorph = () => { preview.textContent = M.catalog().describe(draft.traits); };
   const editor = mountTraits(traitsBox, { traits: draft.traits, species: draft.species, onChange: showMorph });
+  const fillParents = () => {
+    form.damID.innerHTML = parentOptions("female", form.damID.value || draft.damID);
+    form.sireID.innerHTML = parentOptions("male", form.sireID.value || draft.sireID);
+  };
   showMorph();
-  form.species.addEventListener("change", () => editor.setSpecies(form.species.value));
-  form.origin.addEventListener("change", () => { form.querySelector("#origin-prompt").textContent = M.ORIGIN[form.origin.value].prompt; });
+  fillParents();
+  form.species.addEventListener("change", () => {
+    draft.species = form.species.value;
+    editor.setSpecies(form.species.value);
+    fillParents();
+  });
+  form.origin.addEventListener("change", () => {
+    form.querySelector("#origin-prompt").textContent = M.ORIGIN[form.origin.value].prompt;
+    if (form.origin.value === "homeBred" && !form.originDetails.value && M.breederName()) form.originDetails.value = M.breederName();
+  });
+}
+
+// MARK: - Care log
+
+async function logWeight(snake, grams, date) {
+  await save("logs", { id: newID(), snakeID: snake.id, date, kind: "weight", grams, notes: "" });
+  const latest = M.weightsFor(snake)[0];
+  if (latest && latest.grams !== snake.weightGrams) await save("snakes", { ...snake, weightGrams: latest.grams });
+}
+
+function weightChart(weights) {
+  const points = [...weights].reverse().slice(-24);
+  if (points.length < 2) return "";
+  const w = 300, ht = 70, pad = 6;
+  const times = points.map((p) => Date.parse(p.date)), grams = points.map((p) => p.grams);
+  const [t0, t1] = [Math.min(...times), Math.max(...times)], [g0, g1] = [Math.min(...grams), Math.max(...grams)];
+  const x = (t) => pad + ((t - t0) / (t1 - t0 || 1)) * (w - 2 * pad);
+  const y = (g) => ht - pad - ((g - g0) / (g1 - g0 || 1)) * (ht - 2 * pad);
+  const path = points.map((p, i) => `${i ? "L" : "M"}${x(times[i]).toFixed(1)},${y(p.grams).toFixed(1)}`).join(" ");
+  const change = grams[grams.length - 1] - grams[0];
+  return h`<div class="row" style="display:block">
+    <div class="tiny">Weight trend · ${change >= 0 ? "+" : "−"}${formatWeight(Math.abs(change))} since ${formatDate(points[0].date)}</div>
+    <svg viewBox="0 0 ${w} ${ht}" style="width:100%;height:80px" role="img" aria-label="Weight trend">
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${points.map((p, i) => h`<circle cx="${x(times[i]).toFixed(1)}" cy="${y(p.grams).toFixed(1)}" r="3" fill="var(--accent)"/>`)}
+    </svg>
+    <div class="tiny" style="display:flex;justify-content:space-between"><span>${formatWeight(g0)}</span><span>${formatWeight(g1)}</span></div>
+  </div>`;
+}
+
+function logRow(entry) {
+  const kind = M.LOG_KINDS[entry.kind] ?? M.LOG_KINDS.note;
+  return h`<button class="row" data-action="edit-log" data-id="${entry.id}">
+    <span style="width:24px;text-align:center">${kind.icon}</span>
+    <div class="grow"><div>${kind.label}${entry.kind === "weight" && entry.grams ? ` · ${formatWeight(entry.grams)}` : ""}</div>${entry.notes ? h`<div class="tiny ellipsis">${entry.notes}</div>` : ""}</div>
+    <span class="tiny">${formatDate(entry.date)}</span>
+  </button>`;
+}
+
+function careLogSection(snake) {
+  const logs = M.logsFor(snake);
+  const shed = M.lastShed(snake);
+  return h`<h2>Care Log</h2>
+    <div class="card">
+      ${shed ? h`<div class="row"><span class="grow">Last shed</span><span class="value">${daysAgo(shed.date)}</span></div>` : ""}
+      ${weightChart(M.weightsFor(snake))}
+      ${logs.slice(0, 3).map(logRow)}
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        ${["shed", "weight", "cleaning", "medication", "note"].map((k) => h`<button class="btn secondary" style="min-height:36px;padding:0 10px;font-size:14px" data-action="log-care" data-id="${snake.id}" data-kind="${k}">${M.LOG_KINDS[k].icon} ${k === "cleaning" ? "Cleaned" : k === "medication" ? "Meds" : M.LOG_KINDS[k].label}</button>`)}
+      </div>
+      ${logs.length > 3 ? h`<a class="row chevron" href="#/snake/${snake.id}/log"><span class="grow">All entries</span><span class="value">${logs.length}</span></a>` : ""}
+    </div>`;
+}
+
+function logHistoryView(id) {
+  const snake = M.snakeByID(id);
+  if (!snake) return notFound("Snake");
+  const logs = M.logsFor(snake);
+  return h`${topbar("Care Log", { back: { href: `#/snake/${id}`, label: snake.name } })}
+    ${M.weightsFor(snake).length > 1 ? h`<div class="card">${weightChart(M.weightsFor(snake))}</div>` : ""}
+    <h2>Entries</h2>
+    <div class="card">${logs.length ? logs.map(logRow) : h`<div class="row sub">Nothing logged yet.</div>`}</div>
+    <p class="footnote">Tap an entry to edit or delete it.</p>`;
+}
+
+function logForm(snake, entry, kind = "note") {
+  const draft = entry ? structuredClone(entry) : { id: newID(), snakeID: snake.id, date: now(), kind, grams: null, notes: "" };
+  const form = openSheet({
+    title: entry ? "Edit Entry" : M.LOG_KINDS[draft.kind]?.label ?? "Log",
+    body: h`
+      <div class="card" style="margin-top:12px">
+        ${field("Type", h`<select name="kind">${options(Object.entries(M.LOG_KINDS).map(([k, v]) => [k, `${v.icon} ${v.label}`]), draft.kind)}</select>`)}
+        ${field("Date", h`<input type="date" name="date" max="${todayInput()}" value="${toDateInput(draft.date)}">`)}
+        <label class="field" id="grams-row"><span>Weight (g)</span><input type="number" inputmode="decimal" min="0" step="any" name="grams" value="${draft.grams ?? ""}" placeholder="${snake.weightGrams ? formatWeight(snake.weightGrams) : "Grams"}"></label>
+      </div>
+      <h2>Notes</h2>
+      <div class="card"><label class="field stack"><textarea name="notes" placeholder="${draft.kind === "shed" ? "One piece? Eye caps? Stuck tail?" : draft.kind === "medication" ? "Drug, dose, schedule" : "Notes"}">${draft.notes}</textarea></label></div>
+      ${entry ? h`<div class="card" style="margin-top:24px"><button type="button" class="link-btn danger" id="delete-log">Delete Entry</button></div>` : ""}`,
+    onSubmit: async (f) => {
+      const grams = f.grams.value ? Number(f.grams.value) : null;
+      if (f.kind.value === "weight" && !grams) { toast("Enter the weight in grams."); return false; }
+      const picked = f.date.value;
+      draft.date = picked === toDateInput(draft.date) ? draft.date : picked === todayInput() ? now() : fromDateInput(picked);
+      Object.assign(draft, { kind: f.kind.value, grams: f.kind.value === "weight" ? grams : null, notes: f.notes.value });
+      await save("logs", draft);
+      if (draft.kind === "weight") {
+        const latest = M.weightsFor(snake)[0];
+        if (latest && latest.grams !== snake.weightGrams) await save("snakes", { ...snake, weightGrams: latest.grams });
+      }
+      toast(`${M.LOG_KINDS[draft.kind].label} logged`);
+      refresh();
+    },
+  });
+  const showGrams = () => { form.querySelector("#grams-row").hidden = form.kind.value !== "weight"; };
+  form.kind.addEventListener("change", showGrams);
+  showGrams();
+  if (draft.kind === "weight" && !entry) setTimeout(() => form.grams.focus(), 50);
+  document.getElementById("delete-log")?.addEventListener("click", async () => {
+    if (!confirmAction("Delete this entry?")) return;
+    await remove("logs", entry.id);
+    closeSheet();
+    refresh();
+  });
+}
+
+// MARK: - Profile
+
+function profileView() {
+  const p = M.profile();
+  const row = (label, value, href) => (value ? h`<${href ? "a" : "div"} class="row${href ? " chevron" : ""}" ${href ? h`href="${href}"` : ""}><span class="grow">${label}</span><span class="value ellipsis" style="max-width:60%">${value}</span></${href ? "a" : "div"}>` : "");
+  const website = p.website && !/^https?:\/\//i.test(p.website) ? `https://${p.website}` : p.website;
+  return h`${topbar("Profile", { back: { href: "#/settings", label: "Settings" }, action: h`<button class="icon-btn" style="font-size:17px" data-action="edit-profile">Edit</button>` })}
+    <div class="card"><div class="hero">
+      ${p.photo ? h`<img class="thumb lg" src="data:image/jpeg;base64,${p.photo}" alt="">` : h`<div class="thumb lg" aria-hidden="true">👤</div>`}
+      <div><div class="morph">${M.breederName() || "Add your details"}</div>${p.business && p.name ? h`<div class="sub">${p.name}</div>` : ""}${p.location ? h`<div class="tiny">${p.location}</div>` : ""}</div>
+    </div></div>
+    <h2>Contact</h2>
+    <div class="card">
+      ${row("Email", p.email, p.email && `mailto:${encodeURIComponent(p.email)}`)}
+      ${row("Phone", p.phone, p.phone && `tel:${p.phone.replace(/[^+\d]/g, "")}`)}
+      ${row("Website", p.website, website)}
+      ${row("Social", p.social)}
+      ${!p.email && !p.phone && !p.website && !p.social ? h`<div class="row sub">No contact details yet.</div>` : ""}
+    </div>
+    <h2>Defaults</h2>
+    <div class="card">
+      <div class="row"><span class="grow">Species for new snakes</span><span class="value">${p.defaultSpecies}</span></div>
+      <div class="row"><span class="grow">Feeding interval</span><span class="value">${p.defaultFeedingInterval} days</span></div>
+    </div>
+    <h2>At a glance</h2>
+    <div class="card">
+      <div class="row"><span class="grow">In collection</span><span class="value">${data.snakes.filter(M.isInCollection).length}</span></div>
+      <div class="row"><span class="grow">For sale</span><span class="value">${data.snakes.filter((s) => M.statusOf(s) === "forSale").length}</span></div>
+      <div class="row"><span class="grow">Bred by you</span><span class="value">${data.snakes.filter((s) => s.origin === "homeBred").length}</span></div>
+      <div class="row"><span class="grow">Active pairings</span><span class="value">${data.pairings.filter(M.isActivePairing).length}</span></div>
+    </div>
+    ${p.notes ? h`<h2>Notes</h2><div class="card"><div class="row" style="white-space:pre-wrap">${p.notes}</div></div>` : ""}
+    <p class="footnote">Your name appears on exports and as the default for snakes you breed. The profile syncs with the iPad app.</p>`;
+}
+
+function profileForm() {
+  const draft = M.profile();
+  const form = openSheet({
+    title: "Edit Profile",
+    body: h`
+      <div class="card" style="margin-top:12px">
+        <div class="row">
+          <span id="profile-photo">${draft.photo ? h`<img class="thumb" src="data:image/jpeg;base64,${draft.photo}" alt="">` : h`<div class="thumb" aria-hidden="true">👤</div>`}</span>
+          <div class="grow"><button type="button" class="btn secondary" id="pick-photo">Choose Photo / Logo</button></div>
+          ${draft.photo ? h`<button type="button" class="btn danger" id="clear-photo">Remove</button>` : ""}
+        </div>
+      </div>
+      <h2>Breeder</h2>
+      <div class="card">
+        ${field("Your name", h`<input name="name" value="${draft.name}" autocomplete="name">`)}
+        ${field("Business", h`<input name="business" value="${draft.business}" placeholder="Optional" autocomplete="organization">`)}
+        ${field("Location", h`<input name="location" value="${draft.location}" placeholder="City, state / country">`)}
+      </div>
+      <h2>Contact</h2>
+      <div class="card">
+        ${field("Email", h`<input type="email" name="email" value="${draft.email}" autocomplete="email">`)}
+        ${field("Phone", h`<input type="tel" name="phone" value="${draft.phone}" autocomplete="tel">`)}
+        ${field("Website", h`<input type="url" name="website" value="${draft.website}" placeholder="example.com" autocomplete="url">`)}
+        ${field("Social", h`<input name="social" value="${draft.social}" placeholder="@handle, MorphMarket store…">`)}
+      </div>
+      <h2>Defaults</h2>
+      <div class="card">
+        ${field("Species", h`<select name="defaultSpecies">${options(M.catalog().speciesNames.map((s) => [s, s]), draft.defaultSpecies)}</select>`)}
+        ${field("Feed every", h`<input type="number" inputmode="numeric" min="1" max="60" name="defaultFeedingInterval" value="${draft.defaultFeedingInterval}" style="max-width:80px"> days`)}
+      </div>
+      <h2>Notes</h2>
+      <div class="card"><label class="field stack"><textarea name="notes" placeholder="Permits, policies, anything else">${draft.notes}</textarea></label></div>`,
+    onSubmit: async (f) => {
+      Object.assign(draft, {
+        name: f.name.value.trim(), business: f.business.value.trim(), location: f.location.value.trim(),
+        email: f.email.value.trim(), phone: f.phone.value.trim(), website: f.website.value.trim(), social: f.social.value.trim(),
+        defaultSpecies: f.defaultSpecies.value, defaultFeedingInterval: Math.min(60, Math.max(1, Number(f.defaultFeedingInterval.value) || 7)),
+        notes: f.notes.value,
+      });
+      await save("profile", draft);
+      ui.calc.species = ui.finder.species = draft.defaultSpecies;
+      toast("Profile saved");
+      refresh();
+    },
+  });
+  form.querySelector("#pick-photo").addEventListener("click", async () => {
+    const [file] = await pickFile("image/*");
+    if (!file) return;
+    draft.photo = await resizeImage(file, 600, 0.85);
+    form.querySelector("#profile-photo").innerHTML = h`<img class="thumb" src="data:image/jpeg;base64,${draft.photo}" alt="">`.html;
+  });
+  form.querySelector("#clear-photo")?.addEventListener("click", (e) => {
+    draft.photo = null;
+    form.querySelector("#profile-photo").innerHTML = h`<div class="thumb" aria-hidden="true">👤</div>`.html;
+    e.target.remove();
+  });
 }
 
 // MARK: - Feeding
@@ -483,7 +756,7 @@ function feedingForm(snake, record) {
         notes: f.notes.value,
       });
       await save("feedings", draft);
-      if (!record && f.snakeWeight.value) await save("snakes", { ...snake, weightGrams: Number(f.snakeWeight.value) });
+      if (!record && f.snakeWeight.value) await logWeight(snake, Number(f.snakeWeight.value), draft.date);
       toast(draft.refused ? "Refusal logged" : "Feeding logged");
       refresh();
     },
@@ -498,7 +771,7 @@ function feedingForm(snake, record) {
 
 function feedingView() {
   const rank = { overdue: 0, due: 1, none: 2, fed: 3 };
-  const snakes = M.sortedSnakes().sort((a, b) =>
+  const snakes = M.sortedSnakes().filter(M.isInCollection).sort((a, b) =>
     rank[M.feedingStatus(a)] - rank[M.feedingStatus(b)] || (M.nextFeeding(a) ?? "").localeCompare(M.nextFeeding(b) ?? ""));
   if (!snakes.length) return h`${topbar("Feeding")}<div class="empty"><div class="big">🍽</div><p>Nothing to feed yet. Add snakes in the Collection tab.</p></div>`;
   return h`${topbar("Feeding")}
@@ -675,6 +948,13 @@ function pairingView(id) {
       ${hatch && !p.hatchDate ? h`<div class="row"><span class="grow">Est. hatch</span><span class="value">~${formatDate(hatch)}</span></div>` : ""}
       ${row("Hatched", p.hatchDate)}
     </div>
+    ${(() => {
+      const babies = female && male ? M.sortedSnakes().filter((s) => s.damID === female.id && s.sireID === male.id) : [];
+      return h`<h2>Hatchlings${babies.length ? ` (${babies.length})` : ""}</h2>
+        <div class="card">${babies.map((s) => snakeRow(s))}
+          ${female && male ? h`<button class="link-btn" data-action="add-hatchling" data-id="${p.id}">⊕ Add Hatchling</button>` : h`<div class="row sub">Choose both parents to add hatchlings.</div>`}
+        </div>`;
+    })()}
     ${female && male ? h`<h2>Predicted Offspring</h2><div class="card">${outcomeList(cat.cross(female.traits, male.traits), p.fertileEggCount ?? p.eggCount)}</div>` : ""}
     ${p.notes ? h`<h2>Notes</h2><div class="card"><div class="row" style="white-space:pre-wrap">${p.notes}</div></div>` : ""}
     <div class="card" style="margin-top:24px"><button class="link-btn danger" data-action="delete-pairing" data-id="${p.id}">Delete Pairing</button></div>`;
@@ -733,7 +1013,7 @@ function pairingForm(pairing, preset = {}) {
     const female = M.snakeByID(form.femaleID.value || draft.femaleID);
     const male = M.snakeByID(form.maleID.value || draft.maleID);
     const pick = (sex, other, selected) => h`<option value="">Choose…</option>${snakes
-      .filter((s) => s.sex === sex && (!other || s.species === other.species))
+      .filter((s) => s.sex === sex && (!other || s.species === other.species) && (M.isInCollection(s) || s.id === selected))
       .map((s) => h`<option value="${s.id}" ${s.id === selected ? "selected" : ""}>${s.name}</option>`)}`.html;
     form.femaleID.innerHTML = pick("female", male, female?.id);
     form.maleID.innerHTML = pick("male", female, male?.id);
@@ -766,8 +1046,8 @@ function finderView() {
   });
   let matches = [];
   if (f.geneID) {
-    const females = data.snakes.filter((s) => s.species === f.species && s.sex === "female");
-    const males = data.snakes.filter((s) => s.species === f.species && s.sex === "male");
+    const females = data.snakes.filter((s) => s.species === f.species && s.sex === "female" && M.isInCollection(s));
+    const males = data.snakes.filter((s) => s.species === f.species && s.sex === "male" && M.isInCollection(s));
     for (const female of females) {
       for (const male of males) {
         try {
@@ -826,7 +1106,7 @@ function geneticsView() {
   });
 
   const parent = (sex, title) => {
-    const candidates = M.sortedSnakes().filter((s) => s.species === c.species && (s.sex === sex || s.sex === "unknown"));
+    const candidates = M.sortedSnakes().filter((s) => s.species === c.species && (s.sex === sex || s.sex === "unknown") && M.isInCollection(s));
     return h`
       <div class="section-head"><h2>${title}${c[`${sex}Name`] ? `: ${c[`${sex}Name`]}` : ""}</h2>
         ${candidates.length ? h`<select id="load-${sex}" aria-label="Load ${sex} from collection"><option value="">From Collection…</option>${candidates.map((s) => h`<option value="${s.id}">${s.name}</option>`)}</select>` : ""}
@@ -856,11 +1136,18 @@ function settingsView() {
     if (el && estimate) el.textContent = `${formatBytes(estimate.usage)}${estimate.persisted ? " · protected" : ""}`;
   });
   const customs = [...data.customGenes].sort((a, b) => a.name.localeCompare(b.name));
+  const p = M.profile();
   return h`${topbar("Settings")}
+    <div class="card"><a class="row chevron" href="#/profile">
+      ${p.photo ? h`<img class="thumb" src="data:image/jpeg;base64,${p.photo}" alt="">` : h`<div class="thumb" aria-hidden="true">👤</div>`}
+      <div class="grow"><div class="name">${M.breederName() || "Your Profile"}</div><div class="tiny">${p.business && p.name ? `${p.name} · ` : ""}${p.location || "Breeder name, contact details and defaults"}</div></div>
+    </a></div>
+
     <h2>Storage</h2>
     <div class="card">
       <div class="row"><span class="grow">Snakes</span><span class="value">${data.snakes.length}</span></div>
       <div class="row"><span class="grow">Feedings</span><span class="value">${data.feedings.length}</span></div>
+      <div class="row"><span class="grow">Care log entries</span><span class="value">${data.logs.length}</span></div>
       <div class="row"><span class="grow">Photos</span><span class="value">${data.photos.length}</span></div>
       <div class="row"><span class="grow">Pairings</span><span class="value">${data.pairings.length}</span></div>
       <div class="row"><span class="grow">On this device</span><span class="value" id="storage-usage">…</span></div>
@@ -874,14 +1161,14 @@ function settingsView() {
       <button class="link-btn" data-action="sync-export">⇪ Export Sync File</button>
       <button class="link-btn" data-action="sync-import">⇩ Import &amp; Merge Sync File</button>
     </div>
-    <p class="footnote">Export here and import in the other SnakeKeeper app (or the other way round). Records are matched, and the newest version of each one wins, so you can sync in either direction as often as you like. Includes photos.</p>
+    <p class="footnote">Export here and import in the other SnakeKeeper app (or the other way round). Records are matched, and the newest version of each one wins, so you can sync in either direction as often as you like. Includes photos, the care log and your profile.</p>
 
     <h2>Export</h2>
     <div class="card">
       <button class="link-btn" data-action="export-xlsx" ${data.snakes.length || data.pairings.length ? "" : "disabled"}>▦ Excel Workbook (.xlsx)</button>
       <button class="link-btn" data-action="export-csv" ${data.snakes.length || data.pairings.length ? "" : "disabled"}>≡ CSV Files</button>
     </div>
-    <p class="footnote">The workbook has Snakes, Feedings, Concerns and Pairings tabs. Open it in Excel or Numbers, or in Google Sheets: share it to the Sheets app, or save it to Google Drive and open it from there.</p>
+    <p class="footnote">The workbook has Snakes, Feedings, Care Log, Concerns and Pairings tabs. Open it in Excel or Numbers, or in Google Sheets: share it to the Sheets app, or save it to Google Drive and open it from there.</p>
 
     <h2>Custom Genes</h2>
     <div class="card">
@@ -969,20 +1256,21 @@ function geneForm(gene) {
 // MARK: - Export & sync
 
 const stamp = () => new Date().toISOString().slice(0, 10);
+const filePrefix = () => (M.breederName() ? `${M.breederName().replace(/[\\/:*?"<>|]/g, "")} SnakeKeeper` : "SnakeKeeper");
 
 async function exportWorkbook() {
   const blob = xlsxBlob(workbookSheets());
-  await shareFiles([new File([blob], `SnakeKeeper ${stamp()}.xlsx`, { type: blob.type })]);
+  await shareFiles([new File([blob], `${filePrefix()} ${stamp()}.xlsx`, { type: blob.type })]);
 }
 
 async function exportCSVs() {
-  const files = workbookSheets().map((sheet) => new File([csv(sheet)], `SnakeKeeper ${sheet.name} ${stamp()}.csv`, { type: "text/csv" }));
+  const files = workbookSheets().map((sheet) => new File([csv(sheet)], `${filePrefix()} ${sheet.name} ${stamp()}.csv`, { type: "text/csv" }));
   await shareFiles(files);
 }
 
 async function exportSync() {
   const text = JSON.stringify(buildSyncFile(data, "web"));
-  await shareFiles([new File([text], `SnakeKeeper Sync ${stamp()}.json`, { type: "application/json" })]);
+  await shareFiles([new File([text], `${filePrefix()} Sync ${stamp()}.json`, { type: "application/json" })]);
 }
 
 async function importSync() {
@@ -994,7 +1282,7 @@ async function importSync() {
     await db.applyMerge(plan);
     // Children of snakes deleted on the other device.
     const alive = new Set(data.snakes.map((s) => s.id));
-    for (const store of ["feedings", "concerns", "photos"]) {
+    for (const store of ["feedings", "logs", "concerns", "photos"]) {
       await db.remove(store, data[store].filter((r) => !alive.has(r.snakeID)).map((r) => r.id), { tombstone: false });
     }
     ui.lastSaved = now();
@@ -1023,6 +1311,20 @@ const actions = {
     feedingForm(M.snakeByID(record.snakeID), record);
   },
   "add-concern": ({ id }) => concernForm(M.snakeByID(id)),
+  "log-care": ({ id, kind }) => logForm(M.snakeByID(id), null, kind),
+  "edit-log": ({ id }) => {
+    const entry = data.logs.find((l) => l.id === id);
+    logForm(M.snakeByID(entry.snakeID), entry);
+  },
+  "add-hatchling": ({ id }) => {
+    const p = M.pairingByID(id);
+    const female = M.snakeByID(p.femaleID), male = M.snakeByID(p.maleID);
+    snakeForm(null, {
+      species: female?.species ?? male?.species, damID: p.femaleID, sireID: p.maleID,
+      hatchDate: p.hatchDate ?? now(), origin: "homeBred", originDetails: `${p.season} clutch: ${M.pairingTitle(p)}`,
+    });
+  },
+  "edit-profile": () => profileForm(),
   "edit-concern": ({ id }) => {
     const concern = data.concerns.find((c) => c.id === id);
     concernForm(M.snakeByID(concern.snakeID), concern);
@@ -1066,6 +1368,7 @@ window.addEventListener("hashchange", () => { closeSheet(); render(); window.scr
 
 try {
   await db.open();
+  ui.calc.species = ui.finder.species = M.profile().defaultSpecies;
   render();
 } catch (error) {
   console.error(error);

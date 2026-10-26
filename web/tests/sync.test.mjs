@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { planMerge, parseSyncFile, buildSyncFile } from "../js/sync.js";
 
-const empty = () => ({ customGenes: [], snakes: [], feedings: [], concerns: [], photos: [], pairings: [], deleted: [] });
+const empty = () => ({ customGenes: [], snakes: [], feedings: [], logs: [], concerns: [], photos: [], pairings: [], deleted: [], profile: [] });
 const snake = (id, updatedAt, name = id) => ({ id, updatedAt, name });
 
 test("adds new records and keeps the newer version", () => {
@@ -44,4 +44,16 @@ test("rejects other files", () => {
   assert.throws(() => parseSyncFile("{}"));
   assert.throws(() => parseSyncFile("nope"));
   assert.throws(() => parseSyncFile(JSON.stringify({ format: "snakekeeper-sync", version: 99 })));
+});
+
+test("profile: newest wins", () => {
+  const local = { ...empty(), profile: [{ id: "profile", name: "Old", updatedAt: "2026-01-01T00:00:00Z" }] };
+  assert.equal(planMerge(local, { ...empty(), profile: { name: "New", updatedAt: "2026-02-01T00:00:00Z" } }).profile.name, "New");
+  assert.equal(planMerge(local, { ...empty(), profile: { name: "Older", updatedAt: "2025-01-01T00:00:00Z" } }).profile, null);
+  assert.equal(planMerge(empty(), { ...empty(), profile: null }).profile, null);
+});
+
+test("care log entries sync like other records", () => {
+  const incoming = { ...empty(), logs: [{ id: "L", snakeID: "A", kind: "shed", updatedAt: "2026-01-01T00:00:00Z" }] };
+  assert.equal(planMerge(empty(), incoming).put.logs.length, 1);
 });

@@ -179,6 +179,12 @@ export const SPECIES = [
     "locus": "bp.blade"
    },
    {
+    "id": "bp.bongo",
+    "name": "Bongo",
+    "inheritance": "incompleteDominant",
+    "locus": "bp.bongo"
+   },
+   {
     "id": "bp.butter",
     "name": "Butter",
     "inheritance": "incompleteDominant",
@@ -459,158 +465,10 @@ export const SPECIES = [
   ]
  },
  {
-  "name": "Corn Snake",
-  "scientificName": "Pantherophis guttatus",
-  "incubationDays": 60,
-  "genes": [
-   {
-    "id": "corn.amel",
-    "name": "Amelanistic",
-    "inheritance": "recessive",
-    "locus": "corn.amel"
-   },
-   {
-    "id": "corn.anery",
-    "name": "Anerythristic",
-    "inheritance": "recessive",
-    "locus": "corn.anery"
-   },
-   {
-    "id": "corn.caramel",
-    "name": "Caramel",
-    "inheritance": "recessive",
-    "locus": "corn.caramel"
-   },
-   {
-    "id": "corn.charcoal",
-    "name": "Charcoal",
-    "inheritance": "recessive",
-    "locus": "corn.charcoal"
-   },
-   {
-    "id": "corn.cinder",
-    "name": "Cinder",
-    "inheritance": "recessive",
-    "locus": "corn.cinder"
-   },
-   {
-    "id": "corn.diffused",
-    "name": "Diffused (Bloodred)",
-    "inheritance": "recessive",
-    "locus": "corn.diffused"
-   },
-   {
-    "id": "corn.hypo",
-    "name": "Hypomelanistic",
-    "inheritance": "recessive",
-    "locus": "corn.hypo"
-   },
-   {
-    "id": "corn.kastanie",
-    "name": "Kastanie",
-    "inheritance": "recessive",
-    "locus": "corn.kastanie"
-   },
-   {
-    "id": "corn.lava",
-    "name": "Lava",
-    "inheritance": "recessive",
-    "locus": "corn.lava"
-   },
-   {
-    "id": "corn.lavender",
-    "name": "Lavender",
-    "inheritance": "recessive",
-    "locus": "corn.lavender"
-   },
-   {
-    "id": "corn.motley",
-    "name": "Motley",
-    "inheritance": "recessive",
-    "locus": "corn.motley"
-   },
-   {
-    "id": "corn.palmetto",
-    "name": "Palmetto",
-    "inheritance": "recessive",
-    "locus": "corn.palmetto"
-   },
-   {
-    "id": "corn.stripe",
-    "name": "Stripe",
-    "inheritance": "recessive",
-    "locus": "corn.motley"
-   },
-   {
-    "id": "corn.sunkissed",
-    "name": "Sunkissed",
-    "inheritance": "recessive",
-    "locus": "corn.sunkissed"
-   },
-   {
-    "id": "corn.ultra",
-    "name": "Ultra",
-    "inheritance": "recessive",
-    "locus": "corn.amel"
-   },
-   {
-    "id": "corn.tessera",
-    "name": "Tessera",
-    "inheritance": "dominant",
-    "locus": "corn.tessera"
-   }
-  ]
- },
- {
-  "name": "Western Hognose",
-  "scientificName": "Heterodon nasicus",
-  "incubationDays": 55,
-  "genes": [
-   {
-    "id": "hog.albino",
-    "name": "Albino",
-    "inheritance": "recessive",
-    "locus": "hog.albino"
-   },
-   {
-    "id": "hog.axanthic",
-    "name": "Axanthic",
-    "inheritance": "recessive",
-    "locus": "hog.axanthic"
-   },
-   {
-    "id": "hog.lavender",
-    "name": "Lavender",
-    "inheritance": "recessive",
-    "locus": "hog.lavender"
-   },
-   {
-    "id": "hog.pinkpastel",
-    "name": "Pink Pastel",
-    "inheritance": "recessive",
-    "locus": "hog.pinkpastel"
-   },
-   {
-    "id": "hog.toffeebelly",
-    "name": "Toffeebelly",
-    "inheritance": "recessive",
-    "locus": "hog.toffeebelly"
-   },
-   {
-    "id": "hog.anaconda",
-    "name": "Anaconda",
-    "inheritance": "incompleteDominant",
-    "locus": "hog.anaconda",
-    "superName": "Superconda"
-   },
-   {
-    "id": "hog.arctic",
-    "name": "Arctic",
-    "inheritance": "incompleteDominant",
-    "locus": "hog.arctic",
-    "superName": "Super Arctic"
-   }
-  ]
+  "name": "Blood Python",
+  "scientificName": "Python brongersmai",
+  "incubationDays": 75,
+  "genes": []
  },
  {
   "name": "Boa Constrictor",
@@ -677,6 +535,433 @@ export const SPECIES = [
     "name": "Motley",
     "inheritance": "incompleteDominant",
     "locus": "boa.motley"
+   }
+  ]
+ },
+ {
+  "name": "Burmese Python",
+  "scientificName": "Python bivittatus",
+  "incubationDays": 60,
+  "genes": [
+   {
+    "id": "burm.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "burm.albino"
+   },
+   {
+    "id": "burm.caramel",
+    "name": "Caramel",
+    "inheritance": "recessive",
+    "locus": "burm.caramel"
+   },
+   {
+    "id": "burm.granite",
+    "name": "Granite",
+    "inheritance": "recessive",
+    "locus": "burm.granite"
+   },
+   {
+    "id": "burm.green",
+    "name": "Green (Patternless)",
+    "inheritance": "recessive",
+    "locus": "burm.green"
+   },
+   {
+    "id": "burm.labyrinth",
+    "name": "Labyrinth",
+    "inheritance": "recessive",
+    "locus": "burm.labyrinth"
+   }
+  ]
+ },
+ {
+  "name": "California Kingsnake",
+  "scientificName": "Lampropeltis californiae",
+  "incubationDays": 60,
+  "genes": [
+   {
+    "id": "king.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "king.albino"
+   },
+   {
+    "id": "king.banana",
+    "name": "Banana",
+    "inheritance": "recessive",
+    "locus": "king.banana"
+   },
+   {
+    "id": "king.hypo",
+    "name": "Hypomelanistic",
+    "inheritance": "recessive",
+    "locus": "king.hypo"
+   },
+   {
+    "id": "king.lavender",
+    "name": "Lavender",
+    "inheritance": "recessive",
+    "locus": "king.lavender"
+   }
+  ]
+ },
+ {
+  "name": "Carpet Python",
+  "scientificName": "Morelia spilota",
+  "incubationDays": 55,
+  "genes": [
+   {
+    "id": "carpet.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "carpet.albino"
+   },
+   {
+    "id": "carpet.axanthic",
+    "name": "Axanthic",
+    "inheritance": "recessive",
+    "locus": "carpet.axanthic"
+   },
+   {
+    "id": "carpet.jaguar",
+    "name": "Jaguar",
+    "inheritance": "incompleteDominant",
+    "locus": "carpet.jaguar",
+    "warning": "neurological issues (head tremors) reported",
+    "homozygousWarning": "Super Jaguar (leucistic) is reported to be non-viable"
+   }
+  ]
+ },
+ {
+  "name": "Children's Python",
+  "scientificName": "Antaresia childreni",
+  "incubationDays": 55,
+  "genes": []
+ },
+ {
+  "name": "Corn Snake",
+  "scientificName": "Pantherophis guttatus",
+  "incubationDays": 60,
+  "genes": [
+   {
+    "id": "corn.amel",
+    "name": "Amelanistic",
+    "inheritance": "recessive",
+    "locus": "corn.amel"
+   },
+   {
+    "id": "corn.anery",
+    "name": "Anerythristic",
+    "inheritance": "recessive",
+    "locus": "corn.anery"
+   },
+   {
+    "id": "corn.caramel",
+    "name": "Caramel",
+    "inheritance": "recessive",
+    "locus": "corn.caramel"
+   },
+   {
+    "id": "corn.charcoal",
+    "name": "Charcoal",
+    "inheritance": "recessive",
+    "locus": "corn.charcoal"
+   },
+   {
+    "id": "corn.cinder",
+    "name": "Cinder",
+    "inheritance": "recessive",
+    "locus": "corn.cinder"
+   },
+   {
+    "id": "corn.diffused",
+    "name": "Diffused (Bloodred)",
+    "inheritance": "recessive",
+    "locus": "corn.diffused"
+   },
+   {
+    "id": "corn.dilute",
+    "name": "Dilute",
+    "inheritance": "recessive",
+    "locus": "corn.dilute"
+   },
+   {
+    "id": "corn.hypo",
+    "name": "Hypomelanistic",
+    "inheritance": "recessive",
+    "locus": "corn.hypo"
+   },
+   {
+    "id": "corn.kastanie",
+    "name": "Kastanie",
+    "inheritance": "recessive",
+    "locus": "corn.kastanie"
+   },
+   {
+    "id": "corn.lava",
+    "name": "Lava",
+    "inheritance": "recessive",
+    "locus": "corn.lava"
+   },
+   {
+    "id": "corn.lavender",
+    "name": "Lavender",
+    "inheritance": "recessive",
+    "locus": "corn.lavender"
+   },
+   {
+    "id": "corn.microscale",
+    "name": "Microscale",
+    "inheritance": "recessive",
+    "locus": "corn.microscale"
+   },
+   {
+    "id": "corn.motley",
+    "name": "Motley",
+    "inheritance": "recessive",
+    "locus": "corn.motley"
+   },
+   {
+    "id": "corn.palmetto",
+    "name": "Palmetto",
+    "inheritance": "recessive",
+    "locus": "corn.palmetto"
+   },
+   {
+    "id": "corn.scaleless",
+    "name": "Scaleless",
+    "inheritance": "recessive",
+    "locus": "corn.scaleless"
+   },
+   {
+    "id": "corn.stripe",
+    "name": "Stripe",
+    "inheritance": "recessive",
+    "locus": "corn.motley"
+   },
+   {
+    "id": "corn.sunkissed",
+    "name": "Sunkissed",
+    "inheritance": "recessive",
+    "locus": "corn.sunkissed"
+   },
+   {
+    "id": "corn.toffee",
+    "name": "Toffee",
+    "inheritance": "recessive",
+    "locus": "corn.toffee"
+   },
+   {
+    "id": "corn.ultra",
+    "name": "Ultra",
+    "inheritance": "recessive",
+    "locus": "corn.amel"
+   },
+   {
+    "id": "corn.tessera",
+    "name": "Tessera",
+    "inheritance": "dominant",
+    "locus": "corn.tessera"
+   }
+  ]
+ },
+ {
+  "name": "Garter Snake",
+  "scientificName": "Thamnophis spp.",
+  "incubationDays": null,
+  "genes": []
+ },
+ {
+  "name": "Green Tree Python",
+  "scientificName": "Morelia viridis",
+  "incubationDays": 50,
+  "genes": []
+ },
+ {
+  "name": "Kenyan Sand Boa",
+  "scientificName": "Eryx colubrinus",
+  "incubationDays": null,
+  "genes": [
+   {
+    "id": "ksb.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "ksb.albino"
+   },
+   {
+    "id": "ksb.anery",
+    "name": "Anerythristic",
+    "inheritance": "recessive",
+    "locus": "ksb.anery"
+   },
+   {
+    "id": "ksb.splash",
+    "name": "Splash",
+    "inheritance": "recessive",
+    "locus": "ksb.splash"
+   }
+  ]
+ },
+ {
+  "name": "Milk Snake",
+  "scientificName": "Lampropeltis triangulum complex",
+  "incubationDays": 60,
+  "genes": [
+   {
+    "id": "milk.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "milk.albino"
+   },
+   {
+    "id": "milk.anery",
+    "name": "Anerythristic",
+    "inheritance": "recessive",
+    "locus": "milk.anery"
+   },
+   {
+    "id": "milk.hypo",
+    "name": "Hypomelanistic",
+    "inheritance": "recessive",
+    "locus": "milk.hypo"
+   }
+  ]
+ },
+ {
+  "name": "Reticulated Python",
+  "scientificName": "Malayopython reticulatus",
+  "incubationDays": 88,
+  "genes": [
+   {
+    "id": "retic.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "retic.albino"
+   },
+   {
+    "id": "retic.anery",
+    "name": "Anerythristic",
+    "inheritance": "recessive",
+    "locus": "retic.anery"
+   },
+   {
+    "id": "retic.geneticstripe",
+    "name": "Genetic Stripe",
+    "inheritance": "recessive",
+    "locus": "retic.geneticstripe"
+   },
+   {
+    "id": "retic.goldenchild",
+    "name": "Golden Child",
+    "inheritance": "incompleteDominant",
+    "locus": "retic.goldenchild"
+   },
+   {
+    "id": "retic.motley",
+    "name": "Motley",
+    "inheritance": "incompleteDominant",
+    "locus": "retic.motley"
+   },
+   {
+    "id": "retic.platinum",
+    "name": "Platinum",
+    "inheritance": "incompleteDominant",
+    "locus": "retic.platinum"
+   },
+   {
+    "id": "retic.sunfire",
+    "name": "Sunfire",
+    "inheritance": "incompleteDominant",
+    "locus": "retic.sunfire"
+   },
+   {
+    "id": "retic.tiger",
+    "name": "Tiger",
+    "inheritance": "incompleteDominant",
+    "locus": "retic.tiger",
+    "superName": "Super Tiger"
+   },
+   {
+    "id": "retic.titanium",
+    "name": "Titanium",
+    "inheritance": "incompleteDominant",
+    "locus": "retic.titanium"
+   }
+  ]
+ },
+ {
+  "name": "Rosy Boa",
+  "scientificName": "Lichanura spp.",
+  "incubationDays": null,
+  "genes": []
+ },
+ {
+  "name": "Western Hognose",
+  "scientificName": "Heterodon nasicus",
+  "incubationDays": 55,
+  "genes": [
+   {
+    "id": "hog.albino",
+    "name": "Albino",
+    "inheritance": "recessive",
+    "locus": "hog.albino"
+   },
+   {
+    "id": "hog.axanthic",
+    "name": "Axanthic",
+    "inheritance": "recessive",
+    "locus": "hog.axanthic"
+   },
+   {
+    "id": "hog.evanshypo",
+    "name": "Evans Hypo",
+    "inheritance": "recessive",
+    "locus": "hog.evanshypo"
+   },
+   {
+    "id": "hog.lavender",
+    "name": "Lavender",
+    "inheritance": "recessive",
+    "locus": "hog.lavender"
+   },
+   {
+    "id": "hog.lemonghost",
+    "name": "Lemon Ghost",
+    "inheritance": "recessive",
+    "locus": "hog.lemonghost"
+   },
+   {
+    "id": "hog.pinkpastel",
+    "name": "Pink Pastel",
+    "inheritance": "recessive",
+    "locus": "hog.pinkpastel"
+   },
+   {
+    "id": "hog.sable",
+    "name": "Sable",
+    "inheritance": "recessive",
+    "locus": "hog.sable"
+   },
+   {
+    "id": "hog.toffeebelly",
+    "name": "Toffeebelly",
+    "inheritance": "recessive",
+    "locus": "hog.toffeebelly"
+   },
+   {
+    "id": "hog.anaconda",
+    "name": "Anaconda",
+    "inheritance": "incompleteDominant",
+    "locus": "hog.anaconda",
+    "superName": "Superconda"
+   },
+   {
+    "id": "hog.arctic",
+    "name": "Arctic",
+    "inheritance": "incompleteDominant",
+    "locus": "hog.arctic",
+    "superName": "Super Arctic"
    }
   ]
  }

@@ -5,14 +5,22 @@ struct SpreadsheetExport {
     let snakes: [Snake]
     let pairings: [Pairing]
     let catalog: GeneCatalog
+    /// Breeder or business name, used in file names.
+    var breederName: String = ""
 
     var worksheets: [Worksheet] {
-        [snakesSheet, feedingsSheet, concernsSheet, pairingsSheet]
+        [snakesSheet, feedingsSheet, careLogSheet, concernsSheet, pairingsSheet]
+    }
+
+    /// "Scale Tales Reptiles SnakeKeeper" or "SnakeKeeper".
+    static func filePrefix(_ breederName: String) -> String {
+        let cleaned = breederName.filter { !"/\\:*?\"<>|".contains($0) }.trimmingCharacters(in: .whitespaces)
+        return cleaned.isEmpty ? "SnakeKeeper" : "\(cleaned) SnakeKeeper"
     }
 
     /// Writes an .xlsx to a temporary file and returns its URL.
     func writeWorkbook() throws -> URL {
-        let url = Self.exportDirectory().appendingPathComponent("SnakeKeeper \(Self.stamp()).xlsx")
+        let url = Self.exportDirectory().appendingPathComponent("\(Self.filePrefix(breederName)) \(Self.stamp()).xlsx")
         try XLSXWriter.data(for: worksheets).write(to: url, options: .atomic)
         return url
     }
@@ -21,7 +29,7 @@ struct SpreadsheetExport {
     func writeCSVs() throws -> [URL] {
         let directory = Self.exportDirectory()
         return try worksheets.map { sheet in
-            let url = directory.appendingPathComponent("SnakeKeeper \(sheet.name) \(Self.stamp()).csv")
+            let url = directory.appendingPathComponent("\(Self.filePrefix(breederName)) \(sheet.name) \(Self.stamp()).csv")
             try Data(XLSXWriter.csv(for: sheet).utf8).write(to: url, options: .atomic)
             return url
         }
@@ -36,16 +44,22 @@ struct SpreadsheetExport {
     private var snakesSheet: Worksheet {
         Worksheet(
             name: "Snakes",
-            columns: ["Name", "Species", "Sex", "Morph", "Hatch date", "Hatch date estimated", "Age",
+            columns: ["Name", "Species", "Sex", "Morph", "Status", "Status note", "Enclosure", "Dam", "Sire",
+                      "Hatch date", "Hatch date estimated", "Age",
                       "Origin", "Origin details", "Acquired", "Weight (g)", "Feed every (days)",
                       "Last meal", "Last meal prey", "Days since meal", "Feeding status",
-                      "Open concerns", "Photos", "Notes"],
+                      "Last shed", "Open concerns", "Photos", "Notes"],
             rows: sortedSnakes.map { snake in
                 [
                     .text(snake.name),
                     .text(snake.species),
                     .text(snake.sex.displayName),
                     .text(catalog.describe(snake.traits)),
+                    .text(snake.status.displayName),
+                    .text(snake.statusNote),
+                    .text(snake.enclosure),
+                    text(name(of: snake.damID)),
+                    text(name(of: snake.sireID)),
                     date(snake.hatchDate),
                     snake.hatchDate == nil ? .empty : .text(snake.hatchDateIsEstimate ? "Yes" : "No"),
                     text(snake.ageDescription),
@@ -58,6 +72,7 @@ struct SpreadsheetExport {
                     text(snake.lastMeal?.summary),
                     number(snake.daysSinceLastMeal.map { Double($0) }),
                     .text(snake.feedingStatus.label),
+                    date(snake.lastShed?.date),
                     .text(snake.openConcerns.map(\.title).joined(separator: "; ")),
                     .number(Double(snake.photos.count)),
                     .text(snake.notes),
@@ -87,6 +102,19 @@ struct SpreadsheetExport {
             columns: ["Snake", "Date", "Result", "Prey", "Size", "Offered", "Count", "Prey weight (g)", "Notes"],
             rows: rows
         )
+    }
+
+    private var careLogSheet: Worksheet {
+        let rows = sortedSnakes.flatMap { snake in
+            snake.sortedLogs.map { entry -> [Cell] in
+                [.text(snake.name), .date(entry.date), .text(entry.kind.displayName), number(entry.grams), .text(entry.notes)]
+            }
+        }
+        return Worksheet(name: "Care Log", columns: ["Snake", "Date", "Type", "Weight (g)", "Notes"], rows: rows)
+    }
+
+    private func name(of id: UUID?) -> String? {
+        id.flatMap { id in snakes.first { $0.id == id }?.name }
     }
 
     private var concernsSheet: Worksheet {

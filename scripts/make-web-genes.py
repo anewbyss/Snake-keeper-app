@@ -10,8 +10,8 @@ def arg(call, name):
     m = re.search(name + r':\s*"([^"]*)"', call)
     return m.group(1) if m else None
 
-species = []
-for m in re.finditer(r'static let \w+ = Species\(\s*name: "([^"]+)",\s*scientificName: "([^"]+)",\s*incubationDays: (\w+),\s*genes: \[(.*?)\n        \]', src, re.S):
+species = {}
+for m in re.finditer(r'static let \w+ = Species\(\s*name: "([^"]+)",\s*scientificName: "([^"]+)",\s*incubationDays: (\w+),\s*genes: \[(.*?)\n        \]\s*\)', src, re.S):
     name, sci, inc, body = m.groups()
     genes = []
     for call in re.finditer(r'\b(rec|inc|dom)\("(\w+)", "([^"]+)"(.*?)\),?(?:\n|$)', body, re.S):
@@ -27,8 +27,12 @@ for m in re.finditer(r'static let \w+ = Species\(\s*name: "([^"]+)",\s*scientifi
         for key in ("superName", "warning", "homozygousWarning"):
             if arg(rest, key): gene[key] = arg(rest, key)
         genes.append(gene)
-    species.append({"name": name, "scientificName": sci,
-                    "incubationDays": None if inc == "nil" else int(inc), "genes": genes})
+    species[re.search(r'static let (\w+) = Species', m.group(0)).group(1)] = {
+        "name": name, "scientificName": sci, "incubationDays": None if inc == "nil" else int(inc), "genes": genes}
+
+# Same order as GeneLibrary.species
+order = re.findall(r'\w+', re.search(r'public static let species: \[Species\] = \[(.*?)\]', src, re.S).group(1))
+species = [species[name] for name in order]
 
 compounds = {}
 bel = re.search(r'let bel = \[(.*?)\]', src).group(1)

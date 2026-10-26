@@ -17,10 +17,12 @@ struct SyncFile: Codable {
     var customGenes: [CustomGeneDTO] = []
     var snakes: [SnakeDTO] = []
     var feedings: [FeedingDTO] = []
+    var logs: [LogDTO] = []
     var concerns: [ConcernDTO] = []
     var photos: [PhotoDTO] = []
     var pairings: [PairingDTO] = []
     var deleted: [TombstoneDTO] = []
+    var profile: ProfileDTO?
 
     init() {}
 
@@ -33,10 +35,12 @@ struct SyncFile: Codable {
         customGenes = try c.decodeIfPresent([CustomGeneDTO].self, forKey: .customGenes) ?? []
         snakes = try c.decodeIfPresent([SnakeDTO].self, forKey: .snakes) ?? []
         feedings = try c.decodeIfPresent([FeedingDTO].self, forKey: .feedings) ?? []
+        logs = try c.decodeIfPresent([LogDTO].self, forKey: .logs) ?? []
         concerns = try c.decodeIfPresent([ConcernDTO].self, forKey: .concerns) ?? []
         photos = try c.decodeIfPresent([PhotoDTO].self, forKey: .photos) ?? []
         pairings = try c.decodeIfPresent([PairingDTO].self, forKey: .pairings) ?? []
         deleted = try c.decodeIfPresent([TombstoneDTO].self, forKey: .deleted) ?? []
+        profile = try? c.decodeIfPresent(ProfileDTO.self, forKey: .profile)
     }
 }
 
@@ -89,6 +93,11 @@ struct SnakeDTO: SyncDTO {
     var feedingIntervalDays: Int?
     var traits: [TraitDTO]?
     var notes: String?
+    var status: String?
+    var statusNote: String?
+    var enclosure: String?
+    var damID: String?
+    var sireID: String?
 }
 
 struct FeedingDTO: SyncDTO {
@@ -102,6 +111,31 @@ struct FeedingDTO: SyncDTO {
     var preyCount: Int?
     var preyWeightGrams: Double?
     var refused: Bool?
+    var notes: String?
+}
+
+struct LogDTO: SyncDTO {
+    var id: String
+    var updatedAt: Date
+    var snakeID: String
+    var date: Date
+    var kind: String
+    var grams: Double?
+    var notes: String?
+}
+
+struct ProfileDTO: Codable {
+    var updatedAt: Date
+    var name: String?
+    var business: String?
+    var location: String?
+    var email: String?
+    var phone: String?
+    var website: String?
+    var social: String?
+    var photo: Data?
+    var defaultSpecies: String?
+    var defaultFeedingInterval: Int?
     var notes: String?
 }
 
@@ -235,7 +269,20 @@ enum SyncService {
                      species: $0.species, sex: $0.sexRaw, hatchDate: $0.hatchDate,
                      hatchDateIsEstimate: $0.hatchDateIsEstimate, origin: $0.originRaw, originDetails: $0.originDetails,
                      acquiredDate: $0.acquiredDate, weightGrams: $0.weightGrams,
-                     feedingIntervalDays: $0.feedingIntervalDays, traits: $0.traits.map(TraitDTO.init), notes: $0.notes)
+                     feedingIntervalDays: $0.feedingIntervalDays, traits: $0.traits.map(TraitDTO.init), notes: $0.notes,
+                     status: $0.statusRaw, statusNote: $0.statusNote, enclosure: $0.enclosure,
+                     damID: $0.damID?.uuidString, sireID: $0.sireID?.uuidString)
+        }
+        file.logs = try context.fetch(FetchDescriptor<LogEntry>()).compactMap { l in
+            guard let snake = l.snake else { return nil }
+            return LogDTO(id: l.id.uuidString, updatedAt: l.updatedAt, snakeID: snake.id.uuidString, date: l.date,
+                          kind: l.kindRaw, grams: l.grams, notes: l.notes)
+        }
+        if let p = try context.fetch(FetchDescriptor<BreederProfile>()).first {
+            file.profile = ProfileDTO(updatedAt: p.updatedAt, name: p.name, business: p.business, location: p.location,
+                                      email: p.email, phone: p.phone, website: p.website, social: p.social,
+                                      photo: p.photoData, defaultSpecies: p.defaultSpecies,
+                                      defaultFeedingInterval: p.defaultFeedingInterval, notes: p.notes)
         }
         file.feedings = try context.fetch(FetchDescriptor<FeedingRecord>()).compactMap { r in
             guard let snake = r.snake else { return nil }
@@ -353,6 +400,11 @@ enum SyncService {
             snake.feedingIntervalDays = dto.feedingIntervalDays ?? 7
             snake.traits = (dto.traits ?? []).compactMap(\.trait)
             snake.notes = dto.notes ?? ""
+            snake.statusRaw = dto.status ?? SnakeStatus.active.rawValue
+            snake.statusNote = dto.statusNote ?? ""
+            snake.enclosure = dto.enclosure ?? ""
+            snake.damID = dto.damID.flatMap(UUID.init(uuidString:))
+            snake.sireID = dto.sireID.flatMap(UUID.init(uuidString:))
             if let createdAt = dto.createdAt { snake.createdAt = createdAt }
         }
         let snake = { (id: String?) in id.flatMap(UUID.init(uuidString:)).flatMap { snakes[$0] } }
@@ -369,6 +421,16 @@ enum SyncService {
             record.preyWeightGrams = dto.preyWeightGrams
             record.refused = dto.refused ?? false
             record.notes = dto.notes ?? ""
+        }
+
+        _ = try mergeRecords(file.logs, make: { dto -> LogEntry? in
+            snake(dto.snakeID) == nil ? nil : LogEntry(date: dto.date, kind: .note)
+        }) { dto, entry in
+            entry.snake = snake(dto.snakeID)
+            entry.date = dto.date
+            entry.kindRaw = dto.kind
+            entry.grams = dto.grams
+            entry.notes = dto.notes ?? ""
         }
 
         _ = try mergeRecords(file.concerns, make: { dto -> Concern? in
@@ -413,6 +475,31 @@ enum SyncService {
             pairing.notes = dto.notes ?? ""
             if let createdAt = dto.createdAt { pairing.createdAt = createdAt }
         }
+
+        // The breeder profile is a single record: newest wins.
+        if let incoming = file.profile {
+            let existing = try context.fetch(FetchDescriptor<BreederProfile>()).first
+            if existing == nil || incoming.updatedAt > existing!.updatedAt {
+                let profile = existing ?? BreederProfile()
+                if existing == nil { context.insert(profile) }
+                profile.name = incoming.name ?? ""
+                profile.business = incoming.business ?? ""
+                profile.location = incoming.location ?? ""
+                profile.email = incoming.email ?? ""
+                profile.phone = incoming.phone ?? ""
+                profile.website = incoming.website ?? ""
+                profile.social = incoming.social ?? ""
+                profile.photoData = incoming.photo
+                profile.defaultSpecies = incoming.defaultSpecies ?? profile.defaultSpecies
+                profile.defaultFeedingInterval = incoming.defaultFeedingInterval ?? profile.defaultFeedingInterval
+                profile.notes = incoming.notes ?? ""
+                profile.updatedAt = incoming.updatedAt
+                summary.updated += 1
+            }
+        }
+
+        // Keep each snake's current weight in step with its newest logged weight.
+        for snake in snakes.values { snake.syncWeightFromLog() }
 
         Persistence.shared.save(context, stamp: false)
         return summary

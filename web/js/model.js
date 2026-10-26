@@ -22,6 +22,25 @@ export const ORIGIN = {
   other: { label: "Other", prompt: "Details" },
 };
 
+/** Collection status. Sold and deceased animals are hidden from day-to-day lists. */
+export const STATUS = {
+  active: { label: "Active", color: "var(--green)" },
+  forSale: { label: "For Sale", color: "var(--blue)" },
+  onHold: { label: "On Hold", color: "var(--orange)" },
+  sold: { label: "Sold", color: "var(--muted)" },
+  deceased: { label: "Deceased", color: "var(--muted)" },
+};
+export const statusOf = (snake) => (STATUS[snake.status] ? snake.status : "active");
+export const isInCollection = (snake) => !["sold", "deceased"].includes(statusOf(snake));
+
+export const LOG_KINDS = {
+  shed: { label: "Shed", icon: "🐍" },
+  weight: { label: "Weight", icon: "⚖︎" },
+  cleaning: { label: "Enclosure cleaned", icon: "🧽" },
+  medication: { label: "Medication / treatment", icon: "💊" },
+  note: { label: "Note", icon: "📝" },
+};
+
 export const PREY_TYPES = ["Mouse", "Rat", "ASF", "Gerbil", "Chick", "Quail", "Rabbit", "Fish", "Other"];
 export const PREY_SIZES = ["Pinky", "Fuzzy", "Hopper", "Weaned", "Small", "Medium", "Large", "X-Large", "Jumbo"];
 export const PREY_STATES = { "Frozen/thawed": "F/T", "Pre-killed": "P/K", Live: "Live" };
@@ -99,6 +118,10 @@ export const sortedSnakes = () => [...data.snakes].sort((a, b) => a.name.localeC
 export const feedingsFor = (snake) => data.feedings.filter((f) => f.snakeID === snake.id).sort((a, b) => b.date.localeCompare(a.date));
 export const concernsFor = (snake) => data.concerns.filter((c) => c.snakeID === snake.id).sort((a, b) => b.dateNoted.localeCompare(a.dateNoted));
 export const photosFor = (snake) => data.photos.filter((p) => p.snakeID === snake.id).sort((a, b) => b.dateTaken.localeCompare(a.dateTaken));
+export const logsFor = (snake) => data.logs.filter((l) => l.snakeID === snake.id).sort((a, b) => b.date.localeCompare(a.date));
+export const weightsFor = (snake) => logsFor(snake).filter((l) => l.kind === "weight" && l.grams > 0);
+export const lastShed = (snake) => logsFor(snake).find((l) => l.kind === "shed");
+export const offspringOf = (snake) => sortedSnakes().filter((s) => s.damID === snake.id || s.sireID === snake.id);
 export const openConcerns = (snake) => concernsFor(snake).filter((c) => !c.isResolved);
 export const coverPhoto = (snake) => { const photos = photosFor(snake); return photos.find((p) => p.isCover) ?? photos[0]; };
 export const pairingsFor = (snake) => data.pairings.filter((p) => p.femaleID === snake.id || p.maleID === snake.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -168,4 +191,21 @@ export function estimatedHatch(p) {
 
 export function estimatedLay(p) {
   return !p.layDate && p.preLayShedDate ? addDays(p.preLayShedDate, 30) : null;
+}
+
+// MARK: Profile
+
+export const DEFAULT_PROFILE = {
+  id: "profile", name: "", business: "", location: "", email: "", phone: "", website: "", social: "",
+  photo: null, defaultSpecies: SPECIES[0].name, defaultFeedingInterval: 7, notes: "",
+};
+
+export function profile() {
+  return { ...DEFAULT_PROFILE, ...(data.profile[0] ?? {}) };
+}
+
+/** "Morph Market Reptiles" / "Alex Smith" / "" */
+export function breederName() {
+  const p = profile();
+  return p.business || p.name || "";
 }

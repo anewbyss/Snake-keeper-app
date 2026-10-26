@@ -6,7 +6,7 @@
 
 export const FORMAT = "snakekeeper-sync";
 export const VERSION = 1;
-export const RECORD_STORES = ["customGenes", "snakes", "feedings", "concerns", "photos", "pairings"];
+export const RECORD_STORES = ["customGenes", "snakes", "feedings", "logs", "concerns", "photos", "pairings"];
 
 const time = (iso) => (iso ? Date.parse(iso) || 0 : 0);
 
@@ -14,6 +14,7 @@ export function buildSyncFile(data, app = "web") {
   const file = { format: FORMAT, version: VERSION, app, exportedAt: new Date().toISOString() };
   for (const store of RECORD_STORES) file[store] = data[store];
   file.deleted = data.deleted;
+  file.profile = data.profile?.[0] ?? null;
   return file;
 }
 
@@ -27,12 +28,13 @@ export function parseSyncFile(text) {
   if (file?.format !== FORMAT) throw new Error("That file isn't a SnakeKeeper sync file.");
   if (file.version > VERSION) throw new Error("This sync file is from a newer version of SnakeKeeper. Update this app first.");
   for (const store of [...RECORD_STORES, "deleted"]) file[store] = Array.isArray(file[store]) ? file[store] : [];
+  if (typeof file.profile !== "object" || Array.isArray(file.profile)) file.profile = null;
   return file;
 }
 
 /**
  * Works out what to change locally. Returns
- * { put: { store: [records] }, remove: { store: [ids] }, tombstones: [..], summary }.
+ * { put: { store: [records] }, remove: { store: [ids] }, tombstones: [..], profile, summary }.
  * Pure: doesn't touch `local`.
  */
 export function planMerge(local, incoming) {
@@ -79,7 +81,16 @@ export function planMerge(local, incoming) {
     }
   }
 
-  return { put, remove, tombstones: newTombstones, summary };
+  // The breeder profile is a single record: newest wins.
+  const mine = local.profile?.[0];
+  const theirs = incoming.profile && !Array.isArray(incoming.profile) ? incoming.profile : null;
+  let profile = null;
+  if (theirs && (!mine || time(theirs.updatedAt) > time(mine.updatedAt))) {
+    profile = { ...theirs, id: "profile" };
+    summary.updated++;
+  }
+
+  return { put, remove, tombstones: newTombstones, profile, summary };
 }
 
 export function describeSummary({ added, updated, deleted }) {

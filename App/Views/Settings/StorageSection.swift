@@ -6,6 +6,7 @@ struct StorageSection: View {
     @Environment(\.modelContext) private var context
     @Query private var snakes: [Snake]
     @Query private var feedings: [FeedingRecord]
+    @Query private var logs: [LogEntry]
     @Query private var photos: [SnakePhoto]
     @Query private var pairings: [Pairing]
 
@@ -15,6 +16,7 @@ struct StorageSection: View {
         Section {
             LabeledContent("Snakes", value: "\(snakes.count)")
             LabeledContent("Feedings", value: "\(feedings.count)")
+            LabeledContent("Care log entries", value: "\(logs.count)")
             LabeledContent("Photos", value: "\(photos.count)")
             LabeledContent("Pairings", value: "\(pairings.count)")
             LabeledContent("On disk", value: persistence.isTemporary

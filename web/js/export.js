@@ -12,16 +12,17 @@ export function workbookSheets() {
 
   const snakesSheet = {
     name: "Snakes",
-    columns: ["Name", "Species", "Sex", "Morph", "Hatch date", "Hatch date estimated", "Age", "Origin", "Origin details",
+    columns: ["Name", "Species", "Sex", "Morph", "Status", "Status note", "Enclosure", "Dam", "Sire", "Hatch date", "Hatch date estimated", "Age", "Origin", "Origin details",
       "Acquired", "Weight (g)", "Feed every (days)", "Last meal", "Last meal prey", "Days since meal", "Feeding status",
-      "Open concerns", "Photos", "Notes"],
+      "Last shed", "Open concerns", "Photos", "Notes"],
     rows: snakes.map((s) => {
       const meal = M.lastMeal(s);
-      return [s.name, s.species, M.SEX[s.sex]?.label ?? s.sex, cat.describe(s.traits), date(s.hatchDate),
+      return [s.name, s.species, M.SEX[s.sex]?.label ?? s.sex, cat.describe(s.traits), M.STATUS[M.statusOf(s)].label,
+        s.statusNote || null, s.enclosure || null, M.snakeByID(s.damID)?.name ?? null, M.snakeByID(s.sireID)?.name ?? null, date(s.hatchDate),
         s.hatchDate ? yesNo(s.hatchDateIsEstimate) : null, M.ageDescription(s), M.ORIGIN[s.origin]?.label ?? s.origin,
         s.originDetails, date(s.acquiredDate), s.weightGrams ?? null, s.feedingIntervalDays, date(meal?.date),
         meal ? M.feedingSummary(meal) : null, M.daysSinceMeal(s), M.FEEDING_STATUS_LABEL[M.feedingStatus(s)],
-        M.openConcerns(s).map((c) => c.title).join("; "), M.photosFor(s).length, s.notes];
+        date(M.lastShed(s)?.date), M.openConcerns(s).map((c) => c.title).join("; "), M.photosFor(s).length, s.notes];
     }),
   };
 
@@ -30,6 +31,13 @@ export function workbookSheets() {
     columns: ["Snake", "Date", "Result", "Prey", "Size", "Offered", "Count", "Prey weight (g)", "Notes"],
     rows: snakes.flatMap((s) => M.feedingsFor(s).map((r) => [s.name, date(r.date), r.refused ? "Refused" : "Ate", r.preyType,
       r.preySize, r.preyState, r.preyCount, r.preyWeightGrams ?? null, r.notes])),
+  };
+
+  const careLogSheet = {
+    name: "Care Log",
+    columns: ["Snake", "Date", "Type", "Weight (g)", "Notes"],
+    rows: snakes.flatMap((s) => M.logsFor(s).map((l) => [s.name, date(l.date), M.LOG_KINDS[l.kind]?.label ?? l.kind,
+      l.grams ?? null, l.notes])),
   };
 
   const concernsSheet = {
@@ -54,5 +62,5 @@ export function workbookSheets() {
       }),
   };
 
-  return [snakesSheet, feedingsSheet, concernsSheet, pairingsSheet];
+  return [snakesSheet, feedingsSheet, careLogSheet, concernsSheet, pairingsSheet];
 }

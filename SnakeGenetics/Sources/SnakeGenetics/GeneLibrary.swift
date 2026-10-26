@@ -14,7 +14,11 @@ public struct Species: Identifiable, Hashable, Sendable {
 ///
 /// Health notes are the commonly reported issues in the hobby, not veterinary advice.
 public enum GeneLibrary {
-    public static let species: [Species] = [ballPython, cornSnake, hognose, boa]
+    /// Ball python first (the default), then alphabetical.
+    public static let species: [Species] = [
+        ballPython, bloodPython, boa, burmese, kingsnake, carpet, childrens, cornSnake, gartersnake,
+        greenTree, kenyanSandBoa, milkSnake, reticulated, rosyBoa, hognose,
+    ]
 
     public static var allGenes: [Gene] { species.flatMap(\.genes) }
 
@@ -98,6 +102,7 @@ public enum GeneLibrary {
                 warning: "sex-linked: watch for male/female maker effects"),
             inc("bp", "Black Pastel", id: "blackpastel", homozygousWarning: "may show kinking or duckbill"),
             inc("bp", "Blade"),
+            inc("bp", "Bongo"),
             inc("bp", "Butter", locus: "bel", superName: "Blue Eyed Leucistic"),
             inc("bp", "Chocolate"),
             inc("bp", "Cinnamon", homozygousWarning: "may show kinking or duckbill"),
@@ -160,14 +165,18 @@ public enum GeneLibrary {
             rec("corn", "Charcoal"),
             rec("corn", "Cinder"),
             rec("corn", "Diffused (Bloodred)", id: "diffused"),
+            rec("corn", "Dilute"),
             rec("corn", "Hypomelanistic", id: "hypo"),
             rec("corn", "Kastanie"),
             rec("corn", "Lava"),
             rec("corn", "Lavender"),
+            rec("corn", "Microscale"),
             rec("corn", "Motley", locus: "motley"),
             rec("corn", "Palmetto"),
+            rec("corn", "Scaleless"),
             rec("corn", "Stripe", locus: "motley"),
             rec("corn", "Sunkissed"),
+            rec("corn", "Toffee"),
             rec("corn", "Ultra", locus: "amel"),
             dom("corn", "Tessera"),
         ]
@@ -182,8 +191,11 @@ public enum GeneLibrary {
         genes: [
             rec("hog", "Albino"),
             rec("hog", "Axanthic"),
+            rec("hog", "Evans Hypo", id: "evanshypo"),
             rec("hog", "Lavender"),
+            rec("hog", "Lemon Ghost", id: "lemonghost"),
             rec("hog", "Pink Pastel", id: "pinkpastel"),
+            rec("hog", "Sable"),
             rec("hog", "Toffeebelly"),
             inc("hog", "Anaconda", superName: "Superconda"),
             inc("hog", "Arctic", superName: "Super Arctic"),
@@ -207,6 +219,116 @@ public enum GeneLibrary {
             inc("boa", "Jungle"),
             inc("boa", "Leopard"),
             inc("boa", "Motley"),
+        ]
+    )
+
+    // MARK: - Burmese python
+
+    static let burmese = Species(
+        name: "Burmese Python",
+        scientificName: "Python bivittatus",
+        incubationDays: 60,
+        genes: [
+            rec("burm", "Albino"),
+            rec("burm", "Caramel"),
+            rec("burm", "Granite"),
+            rec("burm", "Green (Patternless)", id: "green"),
+            rec("burm", "Labyrinth"),
+        ]
+    )
+
+    // MARK: - California kingsnake
+
+    static let kingsnake = Species(
+        name: "California Kingsnake",
+        scientificName: "Lampropeltis californiae",
+        incubationDays: 60,
+        genes: [
+            rec("king", "Albino"),
+            rec("king", "Banana"),
+            rec("king", "Hypomelanistic", id: "hypo"),
+            rec("king", "Lavender"),
+        ]
+    )
+
+    // MARK: - Carpet python
+
+    static let carpet = Species(
+        name: "Carpet Python",
+        scientificName: "Morelia spilota",
+        incubationDays: 55,
+        genes: [
+            rec("carpet", "Albino"),
+            rec("carpet", "Axanthic"),
+            inc("carpet", "Jaguar", warning: "neurological issues (head tremors) reported",
+                homozygousWarning: "Super Jaguar (leucistic) is reported to be non-viable"),
+        ]
+    )
+
+    // MARK: - Kenyan sand boa
+
+    static let kenyanSandBoa = Species(
+        name: "Kenyan Sand Boa",
+        scientificName: "Eryx colubrinus",
+        incubationDays: nil,
+        genes: [
+            rec("ksb", "Albino"),
+            rec("ksb", "Anerythristic", id: "anery"),
+            rec("ksb", "Splash"),
+        ]
+    )
+
+    // MARK: - Milk snake
+
+    static let milkSnake = Species(
+        name: "Milk Snake",
+        scientificName: "Lampropeltis triangulum complex",
+        incubationDays: 60,
+        genes: [
+            rec("milk", "Albino"),
+            rec("milk", "Anerythristic", id: "anery"),
+            rec("milk", "Hypomelanistic", id: "hypo"),
+        ]
+    )
+
+    // MARK: - Reticulated python
+
+    static let reticulated = Species(
+        name: "Reticulated Python",
+        scientificName: "Malayopython reticulatus",
+        incubationDays: 88,
+        genes: [
+            rec("retic", "Albino"),
+            rec("retic", "Anerythristic", id: "anery"),
+            rec("retic", "Genetic Stripe", id: "geneticstripe"),
+            inc("retic", "Golden Child", id: "goldenchild"),
+            inc("retic", "Motley"),
+            inc("retic", "Platinum"),
+            inc("retic", "Sunfire"),
+            inc("retic", "Tiger", superName: "Super Tiger"),
+            inc("retic", "Titanium"),
+        ]
+    )
+
+    // MARK: - Species tracked without a gene library (add custom genes as needed)
+
+    static let bloodPython = Species(name: "Blood Python", scientificName: "Python brongersmai", incubationDays: 75, genes: [
+        ]
+    )
+
+    static let childrens = Species(name: "Children's Python", scientificName: "Antaresia childreni", incubationDays: 55, genes: [
+        ]
+    )
+
+    static let gartersnake = Species(name: "Garter Snake", scientificName: "Thamnophis spp.", incubationDays: nil, genes: [
+        ]
+    )
+
+    static let greenTree = Species(name: "Green Tree Python", scientificName: "Morelia viridis", incubationDays: 50, genes: [
+        ]
+    )
+
+    static let rosyBoa = Species(name: "Rosy Boa", scientificName: "Lichanura spp.", incubationDays: nil, genes: [
         ]
     )
 

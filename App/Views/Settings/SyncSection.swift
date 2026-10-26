@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// Export / import the sync file shared with the SnakeKeeper web app. Place inside a `List`.
 struct SyncSection: View {
     @Environment(\.modelContext) private var context
+    @Query private var profiles: [BreederProfile]
 
     @State private var shareItems: ShareItems?
     @State private var importing = false
@@ -28,7 +29,7 @@ struct SyncSection: View {
         } header: {
             Text("Sync with the Web App")
         } footer: {
-            Text("Export here and import in the other SnakeKeeper app (or the other way round). Records are matched, and the newest version of each one wins, so you can sync in either direction as often as you like. Includes photos.")
+            Text("Export here and import in the other SnakeKeeper app (or the other way round). Records are matched, and the newest version of each one wins, so you can sync in either direction as often as you like. Includes photos, the care log and your profile.")
         }
         .sheet(item: $shareItems) { items in
             ActivityView(items: items.urls)
@@ -51,7 +52,7 @@ struct SyncSection: View {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
             let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("SnakeKeeper Sync \(formatter.string(from: .now)).json")
+                .appendingPathComponent("\(SpreadsheetExport.filePrefix(profiles.first?.displayName ?? "")) Sync \(formatter.string(from: .now)).json")
             try data.write(to: url, options: .atomic)
             message = nil
             shareItems = ShareItems(urls: [url])

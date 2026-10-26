@@ -1,10 +1,14 @@
 import Foundation
 import SwiftData
 
-/// A model that takes part in sync (see Support/SyncFile.swift).
-protocol Syncable: PersistentModel {
-    var id: UUID { get set }
+/// A model whose `updatedAt` is stamped on every save.
+protocol Timestamped: PersistentModel {
     var updatedAt: Date { get set }
+}
+
+/// A model that takes part in sync (see Support/SyncFile.swift).
+protocol Syncable: Timestamped {
+    var id: UUID { get set }
     /// Collection name in the sync file, shared with the web app.
     static var syncType: String { get }
 }

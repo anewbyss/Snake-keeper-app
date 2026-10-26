@@ -1,6 +1,16 @@
 import SwiftUI
 import SwiftData
 
+enum CollectionFilter: Hashable {
+    case current, all
+    case status(SnakeStatus)
+}
+
+enum CollectionSort: String, CaseIterable, Identifiable {
+    case name = "Name", feeding = "Feeding due", age = "Oldest first", newest = "Recently added"
+    var id: String { rawValue }
+}
+
 struct SnakeListView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Snake.name) private var snakes: [Snake]
@@ -9,13 +19,48 @@ struct SnakeListView: View {
     @State private var searchText = ""
     @State private var speciesFilter: String?
     @State private var sexFilter: Sex?
+    @State private var collectionFilter = CollectionFilter.current
+    @State private var sort = CollectionSort.name
     @State private var showingAdd = false
 
     private var catalog: GeneCatalog { GeneCatalog(custom: customGenes) }
 
+    private func matchesStatus(_ snake: Snake) -> Bool {
+        switch collectionFilter {
+        case .current: return snake.isInCollection
+        case .all: return true
+        case .status(let status): return snake.status == status
+        }
+    }
+
+    private func sorted(_ list: [Snake]) -> [Snake] {
+        func rank(_ snake: Snake) -> Int {
+            switch snake.feedingStatus {
+            case .overdue: return 0
+            case .due: return 1
+            case .noRecord: return 2
+            case .fed: return 3
+            }
+        }
+        switch sort {
+        case .name:
+            return list
+        case .feeding:
+            return list.sorted {
+                rank($0) != rank($1) ? rank($0) < rank($1)
+                    : ($0.nextFeedingDate ?? .distantPast) < ($1.nextFeedingDate ?? .distantPast)
+            }
+        case .age:
+            return list.sorted { ($0.hatchDate ?? .distantFuture) < ($1.hatchDate ?? .distantFuture) }
+        case .newest:
+            return list.sorted { $0.createdAt > $1.createdAt }
+        }
+    }
+
     private var filtered: [Snake] {
-        snakes.filter { snake in
-            (speciesFilter == nil || snake.species == speciesFilter)
+        sorted(snakes).filter { snake in
+            matchesStatus(snake)
+                && (speciesFilter == nil || snake.species == speciesFilter)
                 && (sexFilter == nil || snake.sex == sexFilter)
                 && (searchText.isEmpty
                     || snake.name.localizedCaseInsensitiveContains(searchText)
@@ -71,8 +116,16 @@ struct SnakeListView: View {
                             Text("Any sex").tag(Sex?.none)
                             ForEach(Sex.allCases) { Text($0.displayName).tag(Sex?.some($0)) }
                         }
+                        Picker("Status", selection: $collectionFilter) {
+                            Text("In collection").tag(CollectionFilter.current)
+                            ForEach(SnakeStatus.allCases) { Text($0.displayName).tag(CollectionFilter.status($0)) }
+                            Text("All, incl. sold").tag(CollectionFilter.all)
+                        }
+                        Picker("Sort", selection: $sort) {
+                            ForEach(CollectionSort.allCases) { Text("Sort: \($0.rawValue)").tag($0) }
+                        }
                     } label: {
-                        Label("Filter", systemImage: speciesFilter == nil && sexFilter == nil
+                        Label("Filter", systemImage: speciesFilter == nil && sexFilter == nil && collectionFilter == .current
                               ? "line.3.horizontal.decrease.circle"
                               : "line.3.horizontal.decrease.circle.fill")
                     }
@@ -106,11 +159,15 @@ struct SnakeRowView: View {
                             .font(.caption)
                             .accessibilityLabel("Open concerns")
                     }
+                    if snake.status != .active {
+                        StatusBadge(status: snake.status)
+                    }
                 }
                 Text(morph).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
                 HStack(spacing: 8) {
                     Text(snake.species)
                     if let age = snake.ageDescription { Text("· \(age)") }
+                    if !snake.enclosure.isEmpty { Text("· \(snake.enclosure)") }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

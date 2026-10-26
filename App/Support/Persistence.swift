@@ -24,6 +24,8 @@ final class Persistence {
         Pairing.self,
         CustomGene.self,
         DeletedRecord.self,
+        LogEntry.self,
+        BreederProfile.self,
     ])
 
     static var storeURL: URL {
@@ -49,7 +51,7 @@ final class Persistence {
         if stamp {
             let now = Date()
             for model in context.insertedModelsArray + context.changedModelsArray {
-                (model as? any Syncable)?.updatedAt = now
+                (model as? any Timestamped)?.updatedAt = now
             }
             for model in context.deletedModelsArray {
                 guard let record = model as? any Syncable else { continue }

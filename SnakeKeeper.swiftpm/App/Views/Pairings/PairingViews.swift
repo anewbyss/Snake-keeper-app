@@ -121,11 +121,11 @@ struct PairingEditView: View {
     }
 
     private var females: [Snake] {
-        snakes.filter { $0.sex == .female && (male == nil || $0.species == male?.species) }
+        snakes.filter { $0.sex == .female && (male == nil || $0.species == male?.species) && ($0.isInCollection || $0 == female) }
     }
 
     private var males: [Snake] {
-        snakes.filter { $0.sex == .male && (female == nil || $0.species == female?.species) }
+        snakes.filter { $0.sex == .male && (female == nil || $0.species == female?.species) && ($0.isInCollection || $0 == male) }
     }
 
     var body: some View {
@@ -236,8 +236,15 @@ struct OptionalDatePicker: View {
 
 struct PairingDetailView: View {
     @Query private var customGenes: [CustomGene]
+    @Query(sort: \Snake.name) private var allSnakes: [Snake]
     let pairing: Pairing
     @State private var showingEdit = false
+    @State private var addingHatchling = false
+
+    private var hatchlings: [Snake] {
+        guard let female = pairing.female, let male = pairing.male else { return [] }
+        return allSnakes.filter { $0.damID == female.id && $0.sireID == male.id }
+    }
 
     private var catalog: GeneCatalog { GeneCatalog(custom: customGenes) }
 
@@ -275,6 +282,18 @@ struct PairingDetailView: View {
                 }
                 row("Hatched", pairing.hatchDate)
             }
+            Section(hatchlings.isEmpty ? "Hatchlings" : "Hatchlings (\(hatchlings.count))") {
+                ForEach(hatchlings) { baby in
+                    NavigationLink { SnakeDetailView(snake: baby) } label: {
+                        SnakeRowView(snake: baby, morph: catalog.describe(baby.traits))
+                    }
+                }
+                if pairing.female != nil && pairing.male != nil {
+                    Button { addingHatchling = true } label: { Label("Add Hatchling", systemImage: "plus.circle") }
+                } else {
+                    Text("Choose both parents to add hatchlings.").foregroundStyle(.secondary)
+                }
+            }
             if let female = pairing.female, let male = pairing.male {
                 Section("Predicted Offspring") {
                     OutcomeList(
@@ -292,6 +311,17 @@ struct PairingDetailView: View {
         .toolbar { Button("Edit") { showingEdit = true } }
         .sheet(isPresented: $showingEdit) {
             NavigationStack { PairingEditView(pairing: pairing) }
+        }
+        .sheet(isPresented: $addingHatchling) {
+            NavigationStack {
+                SnakeEditView(snake: nil, preset: HatchlingPreset(
+                    species: pairing.species,
+                    damID: pairing.female?.id,
+                    sireID: pairing.male?.id,
+                    hatchDate: pairing.hatchDate ?? .now,
+                    originDetails: "\(String(pairing.season)) clutch: \(pairing.title)"
+                ))
+            }
         }
     }
 
@@ -355,8 +385,8 @@ struct PairingFinderView: View {
     private var matches: [Match] {
         guard let targetGeneID else { return [] }
         let calculator = catalog.calculator
-        let females = snakes.filter { $0.species == species && $0.sex == .female }
-        let males = snakes.filter { $0.species == species && $0.sex == .male }
+        let females = snakes.filter { $0.species == species && $0.sex == .female && $0.isInCollection }
+        let males = snakes.filter { $0.species == species && $0.sex == .male && $0.isInCollection }
         var result: [Match] = []
         for female in females {
             for male in males {

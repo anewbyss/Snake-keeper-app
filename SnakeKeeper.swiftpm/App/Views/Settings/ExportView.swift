@@ -6,12 +6,14 @@ struct ExportSection: View {
     @Query private var snakes: [Snake]
     @Query private var pairings: [Pairing]
     @Query private var customGenes: [CustomGene]
+    @Query private var profiles: [BreederProfile]
 
     @State private var shareItems: ShareItems?
     @State private var errorMessage: String?
 
     private var export: SpreadsheetExport {
-        SpreadsheetExport(snakes: snakes, pairings: pairings, catalog: GeneCatalog(custom: customGenes))
+        SpreadsheetExport(snakes: snakes, pairings: pairings, catalog: GeneCatalog(custom: customGenes),
+                          breederName: profiles.first?.displayName ?? "")
     }
 
     var body: some View {
@@ -32,7 +34,7 @@ struct ExportSection: View {
         } header: {
             Text("Export")
         } footer: {
-            Text("The workbook has Snakes, Feedings, Concerns and Pairings tabs. Open it in Excel or Numbers, or in Google Sheets: share to the Sheets app, or save to Google Drive and open it from there.")
+            Text("The workbook has Snakes, Feedings, Care Log, Concerns and Pairings tabs. Open it in Excel or Numbers, or in Google Sheets: share to the Sheets app, or save to Google Drive and open it from there.")
         }
         .disabled(snakes.isEmpty && pairings.isEmpty)
         .sheet(item: $shareItems) { items in

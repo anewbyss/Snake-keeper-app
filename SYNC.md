@@ -12,16 +12,22 @@ Change both sides together, and bump `version` for incompatible changes.
   "customGenes": [{ "id", "updatedAt", "name", "species", "inheritance", "superName", "locus", "warning" }],
   "snakes": [{ "id", "updatedAt", "createdAt", "name", "species", "sex", "hatchDate", "hatchDateIsEstimate",
                "origin", "originDetails", "acquiredDate", "weightGrams", "feedingIntervalDays",
-               "traits": [{ "geneID", "zygosity": "single" | "double" | "possibleHet", "probability" }], "notes" }],
+               "traits": [{ "geneID", "zygosity": "single" | "double" | "possibleHet", "probability" }], "notes",
+               "status": "active" | "forSale" | "onHold" | "sold" | "deceased", "statusNote", "enclosure",
+               "damID", "sireID" }],
   "feedings": [{ "id", "updatedAt", "snakeID", "date", "preyType", "preySize", "preyState", "preyCount",
                  "preyWeightGrams", "refused", "notes" }],
+  "logs": [{ "id", "updatedAt", "snakeID", "date", "kind": "shed" | "weight" | "cleaning" | "medication" | "note",
+             "grams", "notes" }],
   "concerns": [{ "id", "updatedAt", "snakeID", "title", "details", "category", "severity", "dateNoted",
                  "isResolved", "resolvedDate", "vetVisit" }],
   "photos": [{ "id", "updatedAt", "snakeID", "dateTaken", "caption", "isCover", "image", "thumbnail" }],
   "pairings": [{ "id", "updatedAt", "createdAt", "femaleID", "maleID", "season", "status", "introducedDate",
                  "lockCount", "lastLockDate", "ovulationDate", "preLayShedDate", "layDate", "eggCount",
                  "fertileEggCount", "hatchDate", "notes" }],
-  "deleted": [{ "id", "type": "snakes" | "feedings" | …, "deletedAt" }]
+  "deleted": [{ "id", "type": "snakes" | "feedings" | …, "deletedAt" }],
+  "profile": { "updatedAt", "name", "business", "location", "email", "phone", "website", "social", "photo",
+               "defaultSpecies", "defaultFeedingInterval", "notes" }
 }
 ```
 
@@ -34,7 +40,8 @@ Change both sides together, and bump `version` for incompatible changes.
 
 1. A deletion ("tombstone") beats any version of the record that is not newer than the deletion.
 2. Otherwise the record with the newer `updatedAt` wins; ties keep the local copy.
-3. Feedings, concerns and photos whose snake doesn't exist are skipped (and cleaned up).
+3. Feedings, care log entries, concerns and photos whose snake doesn't exist are skipped (and cleaned up).
+4. The profile is a single record; the newer `updatedAt` wins.
 
 Because merging only ever keeps the newest data, importing the same file twice, or syncing in
 either order, gives the same result.

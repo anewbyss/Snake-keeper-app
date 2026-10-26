@@ -5,8 +5,10 @@ import SnakeGenetics
 struct GeneticsCalculatorView: View {
     @Query(sort: \Snake.name) private var snakes: [Snake]
     @Query private var customGenes: [CustomGene]
+    @Query private var profiles: [BreederProfile]
 
     @State private var species = GeneLibrary.species[0].name
+    @State private var appliedDefault = false
     @State private var femaleTraits: [TraitEntry] = []
     @State private var maleTraits: [TraitEntry] = []
     @State private var femaleName: String?
@@ -37,6 +39,12 @@ struct GeneticsCalculatorView: View {
                 }
             }
             .navigationTitle("Genetics")
+            .onAppear {
+                // Start on the breeder's usual species.
+                guard !appliedDefault, let profile = profiles.first else { return }
+                appliedDefault = true
+                if femaleTraits.isEmpty && maleTraits.isEmpty { species = profile.defaultSpecies }
+            }
             .toolbar {
                 Button("Reset") {
                     femaleTraits = []
@@ -56,7 +64,7 @@ struct GeneticsCalculatorView: View {
 
     private func parentSection(title: String, sex: Sex, traits: Binding<[TraitEntry]>,
                                name: Binding<String?>) -> some View {
-        let candidates = snakes.filter { $0.species == species && ($0.sex == sex || $0.sex == .unknown) }
+        let candidates = snakes.filter { $0.species == species && ($0.sex == sex || $0.sex == .unknown) && $0.isInCollection }
         return Section {
             TraitsEditor(traits: traits, species: species, catalog: catalog)
         } header: {

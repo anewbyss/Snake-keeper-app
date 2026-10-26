@@ -3,8 +3,8 @@
 import { RECORD_STORES } from "./sync.js";
 
 const DB_NAME = "snakekeeper";
-const DB_VERSION = 1;
-const ALL_STORES = [...RECORD_STORES, "deleted"];
+const DB_VERSION = 2;
+const ALL_STORES = [...RECORD_STORES, "deleted", "profile"];
 
 export const data = Object.fromEntries(ALL_STORES.map((s) => [s, []]));
 
@@ -84,6 +84,7 @@ export async function applyMerge(plan) {
     await remove(store, plan.remove[store], { tombstone: false });
   }
   await save("deleted", plan.tombstones, { keepTimestamps: true });
+  if (plan.profile) await save("profile", plan.profile, { keepTimestamps: true });
 }
 
 export async function storageEstimate() {

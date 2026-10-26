@@ -17,17 +17,31 @@ struct SnakeDetailView: View {
 
     private var pairingCandidates: [Snake] {
         guard let opposite = snake.sex.opposite else { return [] }
-        return allSnakes.filter { $0.species == snake.species && $0.sex == opposite && $0.id != snake.id }
+        return allSnakes.filter { $0.species == snake.species && $0.sex == opposite && $0.id != snake.id && $0.isInCollection }
     }
+
+    private var dam: Snake? { snake.damID.flatMap { id in allSnakes.first { $0.id == id } } }
+    private var sire: Snake? { snake.sireID.flatMap { id in allSnakes.first { $0.id == id } } }
+    private var offspring: [Snake] { allSnakes.filter { $0.damID == snake.id || $0.sireID == snake.id } }
 
     var body: some View {
         List {
             header
             detailsSection
             feedingSection
+            CareLogSection(snake: snake)
             concernsSection
             Section("Photos") { PhotoSection(snake: snake) }
             pairingsSection
+            if !offspring.isEmpty {
+                Section("Offspring (\(offspring.count))") {
+                    ForEach(offspring) { child in
+                        NavigationLink { SnakeDetailView(snake: child) } label: {
+                            SnakeRowView(snake: child, morph: catalog.describe(child.traits))
+                        }
+                    }
+                }
+            }
             if !snake.notes.isEmpty {
                 Section("Notes") { Text(snake.notes) }
             }
@@ -63,6 +77,9 @@ struct SnakeDetailView: View {
                     if let scientific = GeneLibrary.speciesInfo(named: snake.species)?.scientificName {
                         Text(scientific).font(.caption).italic().foregroundStyle(.secondary)
                     }
+                    if snake.status != .active {
+                        StatusBadge(status: snake.status)
+                    }
                 }
             }
             .padding(.vertical, 4)
@@ -73,6 +90,11 @@ struct SnakeDetailView: View {
         Section("Details") {
             LabeledContent("Sex") {
                 Text("\(snake.sex.symbol) \(snake.sex.displayName)").foregroundStyle(snake.sex.color)
+            }
+            LabeledContent("Status", value: snake.statusNote.isEmpty
+                           ? snake.status.displayName : "\(snake.status.displayName) · \(snake.statusNote)")
+            if !snake.enclosure.isEmpty {
+                LabeledContent("Enclosure", value: snake.enclosure)
             }
             if let hatchDate = snake.hatchDate {
                 LabeledContent("Age", value: snake.ageDescription ?? "")
@@ -90,6 +112,12 @@ struct SnakeDetailView: View {
             }
             if let weight = snake.weightGrams {
                 LabeledContent("Weight", value: Weight.format(weight))
+            }
+            if let dam {
+                NavigationLink { SnakeDetailView(snake: dam) } label: { LabeledContent("Dam ♀", value: dam.name) }
+            }
+            if let sire {
+                NavigationLink { SnakeDetailView(snake: sire) } label: { LabeledContent("Sire ♂", value: sire.name) }
             }
         }
     }
@@ -243,5 +271,27 @@ struct PotentialPairingRow: View {
                 Text(error.localizedDescription).font(.caption2).foregroundStyle(.red)
             }
         }
+    }
+}
+
+struct StatusBadge: View {
+    let status: SnakeStatus
+
+    private var color: Color {
+        switch status {
+        case .active: return .green
+        case .forSale: return .blue
+        case .onHold: return .orange
+        case .sold, .deceased: return .gray
+        }
+    }
+
+    var body: some View {
+        Text(status.displayName)
+            .font(.caption2.bold())
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.15), in: Capsule())
+            .foregroundStyle(color)
     }
 }

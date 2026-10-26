@@ -14,6 +14,11 @@ enum ImageProcessing {
         return (full, thumb)
     }
 
+    /// One downscaled JPEG (e.g. a profile photo).
+    static func prepare(_ image: UIImage, maxDimension: CGFloat) -> Data? {
+        resized(image, maxDimension: maxDimension).jpegData(compressionQuality: 0.85)
+    }
+
     private static func resized(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
         let size = image.size
         let scale = min(1, maxDimension / max(size.width, size.height))
