@@ -1,0 +1,35 @@
+# Generate SnakeKeeper.xcodeproj with XcodeGen:  brew install xcodegen && xcodegen
+name: SnakeKeeper
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  SnakeGenetics:
+    path: SnakeGenetics
+targets:
+  SnakeKeeper:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: SnakeGenetics
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: SnakeKeeper
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSCameraUsageDescription: Take photos of your snakes.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.snakekeeper
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
