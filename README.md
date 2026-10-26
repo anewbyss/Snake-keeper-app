@@ -1,7 +1,42 @@
 # SnakeKeeper
 
-A SwiftUI + SwiftData iOS app for snake breeders: track your collection, feedings, health concerns,
-photos and pairings, and predict clutches with a built-in genetics calculator.
+An app for snake breeders: track your collection, feedings, health concerns, photos and pairings,
+and predict clutches with a built-in genetics calculator.
+
+It comes in two versions that can sync with each other:
+
+- **Web app** (`web/`): runs in Safari and installs on the home screen. No Mac, Xcode or Apple
+  developer account needed.
+- **Native iPad / iPhone app** (`App/`): SwiftUI + SwiftData, built with Xcode or Swift Playgrounds.
+
+## Web app
+
+**Install on iPad:** open the web app's address in Safari, tap **Share → Add to Home Screen**.
+It gets its own icon, opens full screen and works offline. Data is stored on the device.
+
+**Publishing (one time):** the repo publishes `web/` to GitHub Pages on every push to `main`
+(`.github/workflows/pages.yml`). Turn it on in *Settings → Pages → Source: GitHub Actions*.
+The address is `https://<owner>.github.io/<repo>/`. GitHub Pages for a private repo needs a paid
+GitHub plan; otherwise make the repo public (only the code is public, never your data) or host the
+`web/` folder anywhere that serves static files.
+
+**Run locally:** `cd web && python3 -m http.server`, then open http://localhost:8000.
+**Tests:** `node --test web/tests/*.test.mjs` (genetics engine and sync merge).
+
+The gene list in `web/js/genes.js` is generated from the Swift library by
+`scripts/make-web-genes.py`, so both apps always know the same genes.
+
+## Syncing the two apps
+
+Both apps have **Settings → Sync**:
+
+1. In one app, **Export Sync File** and save it (e.g. to iCloud Drive / Files).
+2. In the other app, **Import & Merge Sync File** and pick that file.
+
+Each record keeps the newest version, deletions carry over, and photos are included. Do it in
+both directions to bring both apps fully up to date. The format is described in [SYNC.md](SYNC.md).
+
+## Native app
 
 ## Features
 

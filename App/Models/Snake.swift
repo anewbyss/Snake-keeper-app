@@ -81,6 +81,8 @@ final class Snake {
     var traitsData: Data = Data()
     var notes: String = ""
     var createdAt: Date = Date()
+    /// Last edit, for sync.
+    var updatedAt: Date = Date()
 
     @Relationship(deleteRule: .cascade, inverse: \FeedingRecord.snake)
     var feedings: [FeedingRecord] = []
@@ -168,4 +170,8 @@ final class Snake {
         let text = Date.ageString(from: hatchDate)
         return hatchDateIsEstimate ? "~\(text)" : text
     }
+}
+
+extension Snake: Syncable {
+    static let syncType = "snakes"
 }

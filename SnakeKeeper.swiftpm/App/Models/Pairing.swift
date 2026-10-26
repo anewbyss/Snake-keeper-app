@@ -47,6 +47,8 @@ final class Pairing {
     var hatchDate: Date?
     var notes: String = ""
     var createdAt: Date = Date()
+    /// Last edit, for sync.
+    var updatedAt: Date = Date()
 
     init(female: Snake?, male: Snake?, season: Int) {
         self.female = female
@@ -78,4 +80,8 @@ final class Pairing {
         guard layDate == nil, let preLayShedDate else { return nil }
         return Calendar.current.date(byAdding: .day, value: 30, to: preLayShedDate)
     }
+}
+
+extension Pairing: Syncable {
+    static let syncType = "pairings"
 }

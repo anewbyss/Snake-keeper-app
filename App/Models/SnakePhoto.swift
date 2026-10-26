@@ -9,6 +9,8 @@ final class SnakePhoto {
     var dateTaken: Date = Date()
     var caption: String = ""
     var isCover: Bool = false
+    /// Last edit, for sync.
+    var updatedAt: Date = Date()
     var snake: Snake?
 
     init(imageData: Data, thumbnailData: Data, dateTaken: Date = .now) {
@@ -16,4 +18,8 @@ final class SnakePhoto {
         self.thumbnailData = thumbnailData
         self.dateTaken = dateTaken
     }
+}
+
+extension SnakePhoto: Syncable {
+    static let syncType = "photos"
 }

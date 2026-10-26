@@ -38,6 +38,8 @@ final class FeedingRecord {
     var refused: Bool = false
     var notes: String = ""
     var snake: Snake?
+    /// Last edit, for sync.
+    var updatedAt: Date = Date()
 
     init(date: Date, preyType: String, preySize: String, preyState: String, preyCount: Int = 1,
          preyWeightGrams: Double? = nil, refused: Bool = false, notes: String = "") {
@@ -57,4 +59,8 @@ final class FeedingRecord {
         let state = PreyState(rawValue: preyState)?.shortName ?? preyState
         return "\(count)\(preySize) \(preyType) (\(state))"
     }
+}
+
+extension FeedingRecord: Syncable {
+    static let syncType = "feedings"
 }

@@ -44,6 +44,8 @@ final class Concern {
     var isResolved: Bool = false
     var resolvedDate: Date?
     var vetVisit: Bool = false
+    /// Last edit, for sync.
+    var updatedAt: Date = Date()
     var snake: Snake?
 
     init(title: String, category: ConcernCategory = .other, severity: ConcernSeverity = .low, dateNoted: Date = .now) {
@@ -57,4 +59,8 @@ final class Concern {
         get { ConcernSeverity(rawValue: severityRaw) ?? .low }
         set { severityRaw = newValue.rawValue }
     }
+}
+
+extension Concern: Syncable {
+    static let syncType = "concerns"
 }

@@ -12,6 +12,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 StorageSection()
+                SyncSection()
                 ExportSection()
 
                 Section {

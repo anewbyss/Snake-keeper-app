@@ -23,6 +23,7 @@ final class Persistence {
         Concern.self,
         Pairing.self,
         CustomGene.self,
+        DeletedRecord.self,
     ])
 
     static var storeURL: URL {
@@ -41,8 +42,21 @@ final class Persistence {
         }
     }
 
-    func save(_ context: ModelContext) {
+    /// Saves pending changes. Unless `stamp` is false (sync merges), edited records get a fresh
+    /// `updatedAt` and deletions are remembered so they can be synced.
+    func save(_ context: ModelContext, stamp: Bool = true) {
         guard context.hasChanges else { return }
+        if stamp {
+            let now = Date()
+            for model in context.insertedModelsArray + context.changedModelsArray {
+                (model as? any Syncable)?.updatedAt = now
+            }
+            for model in context.deletedModelsArray {
+                guard let record = model as? any Syncable else { continue }
+                context.insert(DeletedRecord(recordID: record.id.uuidString,
+                                             type: type(of: record).syncType, deletedAt: now))
+            }
+        }
         do {
             try context.save()
             lastSaved = .now

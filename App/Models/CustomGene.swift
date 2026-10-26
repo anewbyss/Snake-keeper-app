@@ -13,6 +13,8 @@ final class CustomGene {
     /// Locus shared with an allelic gene; empty means its own locus.
     var locus: String = ""
     var warning: String = ""
+    /// Last edit, for sync.
+    var updatedAt: Date = Date()
 
     init(name: String, species: String, inheritance: Inheritance) {
         self.name = name
@@ -37,4 +39,8 @@ final class CustomGene {
             warning: warning.isEmpty ? nil : warning
         )
     }
+}
+
+extension CustomGene: Syncable {
+    static let syncType = "customGenes"
 }
